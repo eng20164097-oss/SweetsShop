@@ -12,15 +12,18 @@ public class DatabaseManager {
     private static final String URL = "jdbc:sqlite:sweets_shop.db";
 
     public static Connection connect() {
-        Connection conn = null;
-        try {
-            conn = DriverManager.getConnection(URL);
-            System.out.println("Connection to SQLite has been established.");
-        } catch (SQLException e) {
-            System.out.println("Connection error: " + e.getMessage());
-        }
-        return conn;
+    Connection conn = null;
+    try {
+        // سطر إضافي لضمان تحميل المكتبة 
+        Class.forName("org.sqlite.JDBC"); 
+        
+        conn = DriverManager.getConnection(URL);
+        System.out.println("Connection to SQLite has been established.");
+    } catch (Exception e) { 
+        System.out.println("Connection error: " + e.getMessage());
     }
+    return conn;
+}
 
     public static void initializeDatabase() {
         String userTable = "CREATE TABLE IF NOT EXISTS users ("
