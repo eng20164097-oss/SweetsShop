@@ -39,14 +39,38 @@ public class DatabaseManager {
                 + "price REAL NOT NULL,"
                 + "stock INTEGER NOT NULL"
                 + ");";
-
+                
         try (Connection conn = connect();
              Statement stmt = conn.createStatement()) {
             stmt.execute(userTable);
             stmt.execute(productTable);
+            // إضافة مستخدم تجريبي (مدير) للاختبار
+            stmt.execute("INSERT OR IGNORE INTO users (id, name, role, password) VALUES (1, 'admin', 'Manager', '123')");
+
             System.out.println("Database tables initialized successfully.");
         } catch (SQLException e) {
             System.out.println("Table creation error: " + e.getMessage());
         }
     }
+    
+    // 2. ميثود جديدة للتحقق من بيانات الدخول (شرط أساسي للمنطق)
+    public static String authenticateUser(String username, String password) {
+        String query = "SELECT role FROM users WHERE name = ? AND password = ?";
+        try (Connection conn = connect();
+             java.sql.PreparedStatement pstmt = conn.prepareStatement(query)) {
+            
+            pstmt.setString(1, username);
+            pstmt.setString(2, password);
+            java.sql.ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getString("role"); // يعيد دور المستخدم (Manager, Chef...)
+            }
+        } catch (SQLException e) {
+            System.out.println("Auth Error: " + e.getMessage());
+        }
+        return null; // إذا لم يجد المستخدم
+    }
+
 }
+

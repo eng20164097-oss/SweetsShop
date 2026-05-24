@@ -27,6 +27,22 @@ public class LoginFrame extends JFrame {
 
         loginButton = new JButton("Login");
         add(loginButton);
+        loginButton.addActionListener(e -> {
+            String username = userField.getText();
+            String password = new String(passField.getPassword());
+
+            // استدعاء ميثود التحقق من قاعدة البيانات
+            String role = db.DatabaseManager.authenticateUser(username, password);
+
+            if (role != null) {
+                JOptionPane.showMessageDialog(this, "Login Successful! Welcome " + role);
+                this.dispose(); // إغلاق نافذة تسجيل الدخول
+                // هنا سنفتح واجهة لوحة التحكم لاحقاً
+                new MainDashboard(role);
+            } else {
+                JOptionPane.showMessageDialog(this, "Invalid credentials!", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
 
         setVisible(true); // لإظهار النافذة
     }
