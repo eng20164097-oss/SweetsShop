@@ -1,11 +1,9 @@
+package model;
+import java.util.List;
 /**
  * Handles the calculation and representation of a customer invoice.
  * It processes a list of order items to calculate the total amount.
  */
-
-package model;
-import java.util.List;
-
 public class Invoice {
     private int invoiceId;
     private List<OrderItem> items;

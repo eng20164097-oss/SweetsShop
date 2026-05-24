@@ -1,13 +1,10 @@
+package model;
+import java.util.ArrayList;
+import java.util.List;
 /**
  * Manages the stock levels of sweets and products.
  * Includes methods for adding products and checking for low stock alerts.
  */
-
-
-package model;
-import java.util.ArrayList;
-import java.util.List;
-
 public class Inventory {
     private List<Product> products;
 
