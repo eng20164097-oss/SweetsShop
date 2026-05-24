@@ -1,3 +1,9 @@
+/**
+ * Manages the stock levels of sweets and products.
+ * Includes methods for adding products and checking for low stock alerts.
+ */
+
+
 package model;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,10 +15,19 @@ public class Inventory {
         this.products = new ArrayList<>();
     }
 
+/**
+ * Adds a new product to the shop's inventory list.
+ * @param p The product object to be added.
+ */
+
     public void addProduct(Product p) {
         products.add(p);
     }
 
+/**
+ * Scans the inventory and prints an alert for products 
+ * whose stock level is below the minimum threshold (5 units).
+ */
     public void checkLowStock() {
         for (Product p : products) {
             if (p.getStockQuantity() < 5) {

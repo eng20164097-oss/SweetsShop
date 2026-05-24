@@ -1,8 +1,10 @@
 package model;
 
 /**
- * Represents a sweet product in the shop.
+ * Represents a sweet product entity in the shop.
+ * Stores details such as ID, name, price, and stock quantity.
  */
+
 public class Product {
     private int id;
     private String name;

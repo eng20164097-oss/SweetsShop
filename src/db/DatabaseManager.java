@@ -1,15 +1,21 @@
 package db;
-
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
 /**
- * Manages the database connection and schema creation.
+ * The central manager for database operations.
+ * Handles connectivity, schema initialization, and user security.
  */
+
 public class DatabaseManager {
     private static final String URL = "jdbc:sqlite:sweets_shop.db";
+/**
+ * Establishes a connection to the SQLite database file.
+ * Uses the JDBC driver to create a communication bridge.
+ * @return A Connection object if successful, otherwise null.
+ */
 
     public static Connection connect() {
     Connection conn = null;
@@ -24,6 +30,11 @@ public class DatabaseManager {
     }
     return conn;
 }
+
+/**
+ * Sets up the database structure by creating tables for users and products.
+ * It also inserts a default test administrator account.
+ */
 
     public static void initializeDatabase() {
         String userTable = "CREATE TABLE IF NOT EXISTS users ("
@@ -53,7 +64,15 @@ public class DatabaseManager {
         }
     }
     
-    // 2. ميثود جديدة للتحقق من بيانات الدخول (شرط أساسي للمنطق)
+    //  ميثود جديدة للتحقق من بيانات الدخول (شرط أساسي للمنطق)
+/**
+ * Validates user credentials against the database records.
+ * Uses PreparedStatement to prevent SQL injection attacks.
+ * @param username The username entered in the login form.
+ * @param password The password entered in the login form.
+ * @return The role of the user (e.g., Manager, Chef) if valid, or null if invalid.
+ */
+
     public static String authenticateUser(String username, String password) {
         String query = "SELECT role FROM users WHERE name = ? AND password = ?";
         try (Connection conn = connect();

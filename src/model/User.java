@@ -1,8 +1,14 @@
 package model;
 
 /**
- * Abstract class representing a general user in the system.
+ * Abstract class representing a general user in the sweets shop system.
+ * This class serves as the base for Manager, Chef, Cashier, and Customer.
+ * This class cannot be instantiated directly and serves as a blueprint 
+ * It demonstrates Abstraction and Encapsulation.
+ * 
+ * @author Jamela Ahmed
  */
+
 public abstract class User {
     private int id;
     private String name;
@@ -13,6 +19,9 @@ public abstract class User {
         this.name = name;
         this.password = password;
     }
+    /**
+     * Abstract method to be implemented by subclasses to perform specific duties.
+     */
 
     public abstract void performDuty();
 

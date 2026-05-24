@@ -1,4 +1,8 @@
 package model;
+/**
+ * Represents an individual item within a customer's order.
+ * Links a specific product to the quantity ordered and calculates subtotals.
+ */
 
 public class OrderItem {
     private int productId;
@@ -13,6 +17,12 @@ public class OrderItem {
         this.unitPrice = unitPrice;
     }
 
+/**
+ * Calculates the subtotal for this specific item line 
+ * based on quantity and unit price.
+ * @return The calculated subtotal as a double.
+ */
+    
     public double getSubTotal() {
         return quantity * unitPrice;
     }

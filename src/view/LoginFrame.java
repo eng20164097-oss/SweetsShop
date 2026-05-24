@@ -2,11 +2,21 @@ package view;
 
 import javax.swing.*;
 import java.awt.*;
+/**
+ * The graphical user interface for authenticating users.
+ * It provides input fields for username and password and connects 
+ * with the DatabaseManager for verification.
+ */
 
 public class LoginFrame extends JFrame {
     private JTextField userField;
     private JPasswordField passField;
     private JButton loginButton;
+
+/**
+ * Constructs the login window, initializes all UI components, 
+ * and sets up the action listener for the login button.
+ */
 
     public LoginFrame() {
         setTitle("Login - Sweets Shop System");
@@ -37,7 +47,7 @@ public class LoginFrame extends JFrame {
             if (role != null) {
                 JOptionPane.showMessageDialog(this, "Login Successful! Welcome " + role);
                 this.dispose(); // إغلاق نافذة تسجيل الدخول
-                // هنا سنفتح واجهة لوحة التحكم لاحقاً
+            
                 new MainDashboard(role);
             } else {
                 JOptionPane.showMessageDialog(this, "Invalid credentials!", "Error", JOptionPane.ERROR_MESSAGE);
