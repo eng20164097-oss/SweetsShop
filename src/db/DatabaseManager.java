@@ -90,6 +90,106 @@ public class DatabaseManager {
         }
         return null; // إذا لم يجد المستخدم
     }
+        /**
+     * Fetches all products from the database.
+     * Demonstrates data retrieval logic for the UI.
+     */
+    public static java.sql.ResultSet getAllProducts() {
+        try {
+            Connection conn = connect();
+            String query = "SELECT * FROM products";
+            return conn.createStatement().executeQuery(query);
+        } catch (SQLException e) {
+            System.out.println("Error fetching products: " + e.getMessage());
+            return null;
+        }
+    }
+    /**
+     * Inserts a new sweet product into the database.
+     * Includes Exception Handling for data safety.
+     */
+    public static void addProduct(String name, double price, int stock) throws SQLException {
+        String sql = "INSERT INTO products (name, price, stock) VALUES (?, ?, ?)";
+        try (Connection conn = connect(); 
+             java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            pstmt.setDouble(2, price);
+            pstmt.setInt(3, stock);
+            pstmt.executeUpdate();
+            System.out.println("Product added successfully!");
+        }
+    }
+    /**
+     * Fetches all users (Staff) from the database.
+     */
+    public static java.sql.ResultSet getAllUsers() {
+        try {
+            Connection conn = connect();
+            return conn.createStatement().executeQuery("SELECT id, name, role FROM users");
+        } catch (SQLException e) {
+            System.out.println("Error fetching users: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Adds a new staff member.
+     */
+    public static void addUser(String name, String role, String password) throws SQLException {
+        String sql = "INSERT INTO users (name, role, password) VALUES (?, ?, ?)";
+        try (Connection conn = connect();
+             java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            pstmt.setString(2, role);
+            pstmt.setString(3, password);
+            pstmt.executeUpdate();
+        }
+    }
+    // 1. حذف منتج
+    public static void deleteProduct(int id) throws SQLException {
+        String sql = "DELETE FROM products WHERE id = ?";
+        try (Connection conn = connect();
+             java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, id);
+            pstmt.executeUpdate();
+        }
+    }
+
+    // 2. تعديل منتج (تغيير السعر والكمية)
+    public static void updateProduct(int id, String name, double price, int stock) throws SQLException {
+        String sql = "UPDATE products SET name = ?, price = ?, stock = ? WHERE id = ?";
+        try (Connection conn = connect();
+             java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            pstmt.setDouble(2, price);
+            pstmt.setInt(3, stock);
+            pstmt.setInt(4, id);
+            pstmt.executeUpdate();
+        }
+    }
+        // 1. حذف موظف
+    public static void deleteUser(int id) throws SQLException {
+        String sql = "DELETE FROM users WHERE id = ?";
+        try (Connection conn = connect();
+             java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, id);
+            pstmt.executeUpdate();
+        }
+    }
+
+    // 2. تعديل بيانات موظف
+    public static void updateUser(int id, String name, String role) throws SQLException {
+        String sql = "UPDATE users SET name = ?, role = ? WHERE id = ?";
+        try (Connection conn = connect();
+             java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            pstmt.setString(2, role);
+            pstmt.setInt(3, id);
+            pstmt.executeUpdate();
+        }
+    }
+
+
 
 }
 
