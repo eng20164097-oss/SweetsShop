@@ -97,7 +97,7 @@ public class LoginFrame extends JFrame {
 
         // Assembly
         mainPanel.add(logoLabel);
-mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         mainPanel.add(titleLabel);
         mainPanel.add(Box.createRigidArea(new Dimension(0, 30)));
         mainPanel.add(formPanel);
@@ -112,22 +112,40 @@ mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
      * Handles the login logic by verifying user inputs against the database.
      * If successful, it opens the Main Dashboard.
      */
-    private void handleLogin() {
+       private void handleLogin() {
         String username = userField.getText();
         String password = new String(passField.getPassword());
 
-        // Database Verification
+        // التحقق من قاعدة البيانات
         String role = DatabaseManager.authenticateUser(username, password);
 
         if (role != null) {
-            JOptionPane.showMessageDialog(this, "Welcome back, " + role + "!");
-            this.dispose(); // Close login window
-            new MainDashboard(role); // Open Dashboard
-        } else {
-            // Error Handling: Invalid Login
-            JOptionPane.showMessageDialog(this, "Oops! Try again.", "Login Failed", JOptionPane.ERROR_MESSAGE);
+            // 1. رسالة ترحيب واحدة فقط وإغلاق نافذة الدخول
+            JOptionPane.showMessageDialog(this, "Login Successful! Welcome " + role);
+            this.dispose(); 
+
+            // 2. التوجيه الصحيح بناءً على نوع المستخدم
+            if (role.equalsIgnoreCase("Manager")) {
+                new MainDashboard(role);
+            } 
+            else if (role.equalsIgnoreCase("Cashier")) {
+                new CashierDashboard(username); 
+            } 
+            else if (role.equalsIgnoreCase("Chef")) {
+                // استدعاء واجهة الشيف
+                new ChefDashboard(username); 
+            } 
+            else {
+                // لأي دور غير مبرمج حالياً
+                JOptionPane.showMessageDialog(this, "Dashboard for " + role + " is under development.");
+            }
+        } 
+        else {
+            // رسالة خطأ في حال كانت البيانات غلط
+            JOptionPane.showMessageDialog(this, "Invalid Username or Password!", "Login Failed", JOptionPane.ERROR_MESSAGE);
         }
     }
+
 }
 
 

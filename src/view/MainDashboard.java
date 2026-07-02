@@ -192,13 +192,19 @@ public class MainDashboard extends JFrame {
         }
     }
 
-    private void loadProductData() {
+        private void loadProductData() {
         productModel.setRowCount(0);
-        try (ResultSet rs = DatabaseManager.getAllProducts()) {
-            while (rs != null && rs.next()) {
-                productModel.addRow(new Object[]{rs.getInt("id"), rs.getString("name"), rs.getDouble("price"), rs.getInt("stock")});
-            }
-        } catch (Exception e) { e.printStackTrace(); }
+        // استدعاء الميثود الجديدة التي تعيد قائمة
+        java.util.ArrayList<model.Product> products = db.DatabaseManager.getAllProductsList();
+        
+        for (model.Product p : products) {
+            productModel.addRow(new Object[]{
+                p.getId(), 
+                p.getName(), 
+                String.format(java.util.Locale.US, "%.2f", p.getPrice()),
+                p.getStockQuantity()
+            });
+        }
     }
 
     private void loadStaffData() {

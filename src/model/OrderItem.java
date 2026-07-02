@@ -26,5 +26,20 @@ public class OrderItem {
     public double getSubTotal() {
         return quantity * unitPrice;
     }
-    // Getters...
+        public int getProductId() {
+        return productId;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    public double getUnitPrice() {
+        return unitPrice;
+    }
+
 }

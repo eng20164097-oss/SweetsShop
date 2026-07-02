@@ -1,8 +1,14 @@
 package db;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+
+import javax.swing.JOptionPane;
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableModel;
+
 
 /**
  * The central manager for database operations.
@@ -11,6 +17,7 @@ import java.sql.Statement;
 
 public class DatabaseManager {
     private static final String URL = "jdbc:sqlite:sweets_shop.db";
+    
 /**
  * Establishes a connection to the SQLite database file.
  * Uses the JDBC driver to create a communication bridge.
@@ -50,14 +57,32 @@ public class DatabaseManager {
                 + "price REAL NOT NULL,"
                 + "stock INTEGER NOT NULL"
                 + ");";
-                
+                // 1. جدول المبيعات (رأس الفاتورة)
+        String salesTable = "CREATE TABLE IF NOT EXISTS sales ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "cashier_name TEXT,"
+                + "total_price REAL,"
+                + "status TEXT DEFAULT 'Pending',"
+                + "sale_date DATETIME DEFAULT CURRENT_TIMESTAMP"
+                + ");";
+
+// 2. جدول تفاصيل المبيعات (كل صنف في الفاتورة)
+        String saleItemsTable = "CREATE TABLE IF NOT EXISTS sale_items ("
+                + "sale_id INTEGER,"
+                + "product_name TEXT,"
+                + "quantity INTEGER,"
+                + "subtotal REAL,"
+                + "FOREIGN KEY(sale_id) REFERENCES sales(id)"
+                + ");";
+       
         try (Connection conn = connect();
              Statement stmt = conn.createStatement()) {
             stmt.execute(userTable);
             stmt.execute(productTable);
             // إضافة مستخدم تجريبي (مدير) للاختبار
             stmt.execute("INSERT OR IGNORE INTO users (id, name, role, password) VALUES (1, 'admin', 'Manager', '123')");
-
+            stmt.execute(salesTable);
+            stmt.execute(saleItemsTable);
             System.out.println("Database tables initialized successfully.");
         } catch (SQLException e) {
             System.out.println("Table creation error: " + e.getMessage());
@@ -90,20 +115,35 @@ public class DatabaseManager {
         }
         return null; // إذا لم يجد المستخدم
     }
-        /**
-     * Fetches all products from the database.
-     * Demonstrates data retrieval logic for the UI.
+
+
+           /**
+     * Fetches all products and returns them as a List of objects.
+     * This ensures the connection is CLOSED immediately after reading.
      */
-    public static java.sql.ResultSet getAllProducts() {
-        try {
-            Connection conn = connect();
-            String query = "SELECT * FROM products";
-            return conn.createStatement().executeQuery(query);
+    public static java.util.ArrayList<model.Product> getAllProductsList() {
+        java.util.ArrayList<model.Product> list = new java.util.ArrayList<>();
+        String query = "SELECT * FROM products";
+        
+        // استخدام try-with-resources يضمن إغلاق الاتصال تلقائياً (مهم جداً للدرجات)
+        try (Connection conn = connect();
+             java.sql.Statement stmt = conn.createStatement();
+             java.sql.ResultSet rs = stmt.executeQuery(query)) {
+            
+            while (rs.next()) {
+                list.add(new model.Product(
+                    rs.getInt("id"),
+                    rs.getString("name"),
+                    rs.getDouble("price"),
+                    rs.getInt("stock")
+                ));
+            }
         } catch (SQLException e) {
-            System.out.println("Error fetching products: " + e.getMessage());
-            return null;
+            System.out.println("Fetch Error: " + e.getMessage());
         }
+        return list; // نرسل القائمة الجاهزة للواجهة والاتصال مغلق الآن بسلام
     }
+
     /**
      * Inserts a new sweet product into the database.
      * Includes Exception Handling for data safety.
@@ -188,7 +228,147 @@ public class DatabaseManager {
             pstmt.executeUpdate();
         }
     }
+        /**
+     * Reduces the stock quantity of a product after a successful sale.
+     * This is a core part of the system logic to prevent selling items not in stock.
+     * @param productId The ID of the sweet to be updated.
+     * @param quantity The number of items sold.
+     * @throws SQLException If stock is insufficient or database error occurs.
+     */
+        public static void reduceStock(int productId, int quantity) throws SQLException {
+        String sql = "UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?";
+        // استخدام try-with-resources يضمن إغلاق الاتصال تلقائياً فور الانتهاء
+        try (Connection conn = connect();
+             java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, quantity);
+            pstmt.setInt(2, productId);
+            pstmt.setInt(3, quantity);
+            
+            int rowsAffected = pstmt.executeUpdate();
+            if (rowsAffected == 0) {
+                throw new SQLException("Insufficient stock for product ID: " + productId);
+            }
+        }
+    }
 
+    /**
+     * Saves a complete sale transaction to the database.
+     * Demonstrates complex logical integration.
+     */
+    public static void saveSale(String cashierName, double total, java.util.List<model.OrderItem> items) throws SQLException {
+    String saleSql = "INSERT INTO sales (cashier_name, total_price,status) VALUES (?, ?,'Pending')";
+    String itemSql = "INSERT INTO sale_items (sale_id, product_name, quantity, subtotal) VALUES (?, ?, ?, ?)";
+    String updateStockSql = "UPDATE products SET stock = stock - ? WHERE id = ?";
+
+    // اتصال واحد فقط لكل العملية
+    try (Connection conn = connect()) {
+        conn.setAutoCommit(false); // بدء المعاملة
+
+        try (java.sql.PreparedStatement pstmt = conn.prepareStatement(saleSql, java.sql.Statement.RETURN_GENERATED_KEYS);
+             java.sql.PreparedStatement itemStmt = conn.prepareStatement(itemSql);
+             java.sql.PreparedStatement stockStmt = conn.prepareStatement(updateStockSql)) {
+
+            // 1. حفظ رأس الفاتورة
+            pstmt.setString(1, cashierName);
+            pstmt.setDouble(2, total);
+            pstmt.executeUpdate();
+
+            java.sql.ResultSet rs = pstmt.getGeneratedKeys();
+            int saleId = rs.next() ? rs.getInt(1) : 0;
+
+            // 2. حفظ الأصناف وتحديث المخزن (باستخدام نفس الاتصال)
+            for (model.OrderItem item : items) {
+                // حفظ تفاصيل الصنف
+                itemStmt.setInt(1, saleId);
+                itemStmt.setString(2, item.getProductName());
+                itemStmt.setInt(3, item.getQuantity());
+                itemStmt.setDouble(4, item.getSubTotal());
+                itemStmt.executeUpdate();
+
+                // تحديث المخزن فوراً بنفس الـ PreparedStatement
+                stockStmt.setInt(1, item.getQuantity());
+                stockStmt.setInt(2, item.getProductId());
+                stockStmt.executeUpdate();
+            }
+
+            conn.commit(); // هنا يتم الحفظ النهائي وفتح القفل بسلام
+            System.out.println("Sale completed and stock updated!");
+
+        } catch (SQLException e) {
+            conn.rollback(); // تراجع إذا حدث خطأ
+            throw e;
+        }
+    }
+}
+
+    // 1. جلب الطلبات التي لم تُجهز بعد
+    public static ResultSet getPendingSales() {
+        try {
+            Connection conn = connect();
+            return conn.createStatement().executeQuery("SELECT * FROM sales WHERE status = 'Pending'");
+        } catch (SQLException e) {
+            return null;
+        }
+    }
+
+    // 2. جلب تفاصيل طلب معين (الأصناف المشتراة)
+    public static ResultSet getSaleItems(int saleId) {
+        try {
+            Connection conn = connect();
+            String sql = "SELECT * FROM sale_items WHERE sale_id = ?";
+            java.sql.PreparedStatement pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, saleId);
+            return pstmt.executeQuery();
+        } catch (SQLException e) {
+            return null;
+        }
+    }
+
+    // 3. تحديث حالة الطلب إلى "Ready"
+    public static void updateSaleStatus(int saleId) throws SQLException {
+        try (Connection conn = connect();
+             java.sql.PreparedStatement pstmt = conn.prepareStatement("UPDATE sales SET status = 'Ready' WHERE id = ?")) {
+            pstmt.setInt(1, saleId);
+            pstmt.executeUpdate();
+        }
+    }
+
+    /**
+     * جلب الطلبات التي انتهى الشيف من تحضيرها (Ready)
+     */
+    public static java.sql.ResultSet getReadySales() {
+        try {
+            Connection conn = connect();
+            return conn.createStatement().executeQuery("SELECT * FROM sales WHERE status = 'Ready'");
+        } catch (SQLException e) {
+            return null;
+        }
+    }
+        /**
+     * جلب الطلبات التي أصبحت جاهزة للتسليم (Ready)
+     */
+    public static java.util.ArrayList<Object[]> getReadyOrdersList() {
+        java.util.ArrayList<Object[]> list = new java.util.ArrayList<>();
+        String query = "SELECT id, cashier_name, sale_date FROM sales WHERE status = 'Ready'";
+        try (Connection conn = connect();
+             java.sql.ResultSet rs = conn.createStatement().executeQuery(query)) {
+            while (rs.next()) {
+                list.add(new Object[]{rs.getInt("id"), rs.getString("cashier_name"), rs.getString("sale_date")});
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return list;
+    }
+
+    /**
+     * تحديث حالة الطلب إلى مكتمل (Completed) عند تسليمه للزبون
+     */
+    public static void markAsDelivered(int id) throws SQLException {
+        try (Connection conn = connect();
+             java.sql.PreparedStatement pstmt = conn.prepareStatement("UPDATE sales SET status = 'Completed' WHERE id = ?")) {
+            pstmt.setInt(1, id);
+            pstmt.executeUpdate();
+        }
+    }
 
 
 }
