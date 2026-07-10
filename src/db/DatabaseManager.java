@@ -55,7 +55,8 @@ public class DatabaseManager {
                 + "id INTEGER PRIMARY KEY,"
                 + "name TEXT NOT NULL,"
                 + "price REAL NOT NULL,"
-                + "stock INTEGER NOT NULL"
+                + "stock INTEGER NOT NULL,"
+                + "image_name TEXT"
                 + ");";
                 // 1. جدول المبيعات (رأس الفاتورة)
         String salesTable = "CREATE TABLE IF NOT EXISTS sales ("
@@ -125,7 +126,7 @@ public class DatabaseManager {
         java.util.ArrayList<model.Product> list = new java.util.ArrayList<>();
         String query = "SELECT * FROM products";
         
-        // استخدام try-with-resources يضمن إغلاق الاتصال تلقائياً (مهم جداً للدرجات)
+        // استخدام try-with-resources يضمن إغلاق الاتصال تلقائياً 
         try (Connection conn = connect();
              java.sql.Statement stmt = conn.createStatement();
              java.sql.ResultSet rs = stmt.executeQuery(query)) {
@@ -135,7 +136,8 @@ public class DatabaseManager {
                     rs.getInt("id"),
                     rs.getString("name"),
                     rs.getDouble("price"),
-                    rs.getInt("stock")
+                    rs.getInt("stock"),
+                    rs.getString("image_name")
                 ));
             }
         } catch (SQLException e) {
@@ -148,13 +150,14 @@ public class DatabaseManager {
      * Inserts a new sweet product into the database.
      * Includes Exception Handling for data safety.
      */
-    public static void addProduct(String name, double price, int stock) throws SQLException {
-        String sql = "INSERT INTO products (name, price, stock) VALUES (?, ?, ?)";
+    public static void addProduct(String name, double price, int stock, String imageName) throws SQLException {
+        String sql = "INSERT INTO products (name, price, stock, image_name) VALUES (?, ?, ?, ?)";
         try (Connection conn = connect(); 
              java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, name);
             pstmt.setDouble(2, price);
             pstmt.setInt(3, stock);
+            pstmt.setString(4, imageName);
             pstmt.executeUpdate();
             System.out.println("Product added successfully!");
         }
@@ -369,6 +372,7 @@ public class DatabaseManager {
             pstmt.executeUpdate();
         }
     }
+    
 
 
 }

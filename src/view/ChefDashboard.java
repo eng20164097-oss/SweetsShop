@@ -49,7 +49,7 @@ public class ChefDashboard extends JFrame {
             int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to logout?", "Logout", JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
                 this.dispose(); // إغلاق واجهة الشيف
-                new LoginFrame(); // العودة لشاشة الدخول
+                new CustomerHome(); // العودة لشاشة الدخول
             }
         });
         

@@ -38,9 +38,10 @@ public class CashierDashboard extends JFrame {
         title.setFont(new Font("Segoe UI", Font.BOLD, 18));
         JButton btnLogout = new JButton("Logout ↩️");
         btnLogout.addActionListener(e -> {
-            this.dispose();
-            new LoginFrame();
-        });
+    this.dispose();
+    new CustomerHome(); // يعود للواجهة الرئيسية للزبائن
+    });
+
         header.add(title, BorderLayout.WEST);
         header.add(btnLogout, BorderLayout.EAST);
         add(header, BorderLayout.NORTH);

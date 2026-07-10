@@ -58,7 +58,7 @@ public class MainDashboard extends JFrame {
             int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to logout?", "Logout", JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
                 this.dispose(); // إغلاق لوحة التحكم
-                new LoginFrame(); // فتح شاشة الدخول مرة أخرى
+                new CustomerHome(); // فتح شاشة الدخول مرة أخرى
             }
         });
 
@@ -151,27 +151,42 @@ public class MainDashboard extends JFrame {
 
 
     // ميثود إضافة منتج (مع Exception Handling)
-    private void addNewProduct() {
+        private void addNewProduct() {
         try {
+            // 1. طلب اسم الحلوى
             String name = JOptionPane.showInputDialog(this, "Enter Sweet Name:");
-            if (name == null || name.
-            isEmpty()) return;
+            if (name == null || name.isEmpty()) return;
 
+            // 2. طلب السعر
             String priceStr = JOptionPane.showInputDialog(this, "Enter Price:");
+            if (priceStr == null) return;
             double price = Double.parseDouble(priceStr);
 
-            String stockStr = JOptionPane.showInputDialog(this, "Enter Stock:");
+            // 3. طلب الكمية
+            String stockStr = JOptionPane.showInputDialog(this, "Enter Stock Quantity:");
+            if (stockStr == null) return;
             int stock = Integer.parseInt(stockStr);
 
-            DatabaseManager.addProduct(name, price, stock);
+            // 4. طلب اسم ملف الصورة 
+            String imageName = JOptionPane.showInputDialog(this, "Enter Image File Name (e.g., cake.jpg):", "cake.jpg");
+            if (imageName == null || imageName.isEmpty()) imageName = "default.jpg";
+
+            // 5. استدعاء ميثود الإضافة من DatabaseManager
+            db.DatabaseManager.addProduct(name, price, stock, imageName);
+            
+            // 6. تحديث الجدول ورسالة نجاح
             loadProductData();
-            JOptionPane.showMessageDialog(this, "Product added!");
+            JOptionPane.showMessageDialog(this, "Sweet and Image added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Invalid input! Please enter numbers for price/stock.", "Error", JOptionPane.ERROR_MESSAGE);
+            // معالجة خطأ إدخال نص بدلاً من رقم
+            JOptionPane.showMessageDialog(this, "Error: Price and Stock must be numbers!", "Input Error", JOptionPane.ERROR_MESSAGE);
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Database error: " + ex.getMessage());
+            // معالجة أي أخطاء أخرى (مثل قاعدة البيانات)
+            JOptionPane.showMessageDialog(this, "Database Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
+
 
     // ميثود إضافة موظف (مع Exception Handling)
     private void addNewStaff() {
