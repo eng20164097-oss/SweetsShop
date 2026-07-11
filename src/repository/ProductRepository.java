@@ -57,5 +57,15 @@ public class ProductRepository {
             pstmt.executeUpdate();
         }
     }
+        // جلب عدد الأصناف ناقصة المخزون (أقل من 5 قطع)
+    public int getLowStockCount() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM products WHERE stock < 5";
+        try (Connection conn = db.DatabaseManager.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            return rs.next() ? rs.getInt(1) : 0;
+        }
+    }
+
 }
 

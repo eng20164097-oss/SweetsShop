@@ -33,7 +33,9 @@ public class CashierDashboard extends JFrame {
     public CashierDashboard(String name) {
         this.cashierName = name;
         setTitle("نظام مبيعات متجر الحلويات - [الكاشير: " + name + "]");
-        setSize(1100, 700);
+        // هذا السطر يجعل النافذة تفتح بكامل الشاشة تلقائياً حسب حجم شاشة الكمبيوتر
+        this.setExtendedState(JFrame.MAXIMIZED_BOTH); 
+
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(10, 10));

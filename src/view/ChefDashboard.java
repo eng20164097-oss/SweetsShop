@@ -23,7 +23,9 @@ public class ChefDashboard extends JFrame {
     public ChefDashboard(String chefName) {
         // إعدادات النافذة المعربة
         setTitle("نظام متجر الحلويات - مساحة المطبخ (الشيف: " + chefName + ")");
-        setSize(900, 650);
+        // هذا السطر يجعل النافذة تفتح بكامل الشاشة تلقائياً حسب حجم شاشة الكمبيوتر
+        this.setExtendedState(JFrame.MAXIMIZED_BOTH); 
+
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new GridLayout(2, 1, 15, 15)); // تقسيم الشاشة لنصفين

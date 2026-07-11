@@ -80,5 +80,37 @@ public class SalesRepository {
         }
         return list;
     }
+        // جلب إجمالي الأرباح
+    public double getTotalRevenue() throws SQLException {
+        String sql = "SELECT SUM(total_price) FROM sales";
+        try (Connection conn = db.DatabaseManager.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            return rs.next() ? rs.getDouble(1) : 0.0;
+        }
+    }
+
+    // جلب كل العمليات المسجلة للتقرير
+    public ResultSet getAllSales() throws SQLException {
+        return db.DatabaseManager.getConnection().createStatement().executeQuery("SELECT * FROM sales ORDER BY sale_date DESC");
+    }
+    /**
+     * جلب أكثر 5 منتجات مبيعاً للرسم البياني
+     */
+    public java.util.Map<String, Integer> getTopSellingProducts() throws SQLException {
+        java.util.Map<String, Integer> data = new java.util.LinkedHashMap<>();
+        String sql = "SELECT product_name, SUM(quantity) as total FROM sale_items " +
+                     "GROUP BY product_name ORDER BY total DESC LIMIT 5";
+        
+        try (Connection conn = db.DatabaseManager.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                data.put(rs.getString("product_name"), rs.getInt("total"));
+            }
+        }
+        return data;
+    }
+
 }
 

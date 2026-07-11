@@ -34,7 +34,9 @@ public class CustomerHome extends JFrame {
 
     public CustomerHome() {
         setTitle("متجر الحلويات الملكي - القائمة الرقمية");
-        setSize(1150, 750);
+        // هذا السطر يجعل النافذة تفتح بكامل الشاشة تلقائياً حسب حجم شاشة الكمبيوتر
+        this.setExtendedState(JFrame.MAXIMIZED_BOTH); 
+
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());

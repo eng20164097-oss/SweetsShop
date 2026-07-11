@@ -52,4 +52,14 @@ public class UserRepository {
             pstmt.executeUpdate();
         }
     }
+        // جلب إجمالي عدد الموظفين
+    public int getStaffCount() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM users";
+        try (Connection conn = db.DatabaseManager.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            return rs.next() ? rs.getInt(1) : 0;
+        }
+    }
+
 }
