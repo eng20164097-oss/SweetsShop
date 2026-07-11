@@ -4,68 +4,92 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.sql.ResultSet;
-import db.DatabaseManager;
+import service.SalesService; // استيراد طبقة الخدمة (Layer 2)
 
+/**
+ * Layer 1: Presentation Layer (GUI).
+ * واجهة الشيف المعربة - تدعم المعمارية الرباعية والتحكم في تحضير الطلبات.
+ */
 public class ChefDashboard extends JFrame {
     private JTable ordersTable, detailsTable;
     private DefaultTableModel ordersModel, detailsModel;
+    
+    // ربط الواجهة بطبقة الخدمة
+    private SalesService salesService = new SalesService();
+
     private final Color ACCENT_PINK = new Color(240, 98, 146);
     private final Color LIGHT_PINK = new Color(252, 228, 236);
 
     public ChefDashboard(String chefName) {
-        setTitle("Sweets Shop - Kitchen Area (Chef: " + chefName + ")");
-        setSize(800, 600);
+        // إعدادات النافذة المعربة
+        setTitle("نظام متجر الحلويات - مساحة المطبخ (الشيف: " + chefName + ")");
+        setSize(900, 650);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-        setLayout(new GridLayout(2, 1, 10, 10)); // تقسيم الشاشة لنصفين
+        setLayout(new GridLayout(2, 1, 15, 15)); // تقسيم الشاشة لنصفين
         getContentPane().setBackground(LIGHT_PINK);
-
-        // --- النصف العلوي: قائمة الطلبات الجديدة ---
-        JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBorder(BorderFactory.createTitledBorder("New Pending Orders"));
-        ordersModel = new DefaultTableModel(new String[]{"Order ID", "Date", "Status"}, 0);
-        ordersTable = new JTable(ordersModel);
         
-        // عند الضغط على طلب، تظهر تفاصيله في الجدول السفلي
+        // ضبط اتجاه النافذة من اليمين لليسار
+        applyComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+
+        // --- 1. النصف العلوي: قائمة الطلبات الجديدة ---
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setOpaque(false);
+        topPanel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(ACCENT_PINK), " الطلبات الجديدة قيد الانتظار 📥 ", 
+            2, 0, new Font(Font.DIALOG, Font.BOLD, 14), ACCENT_PINK));
+
+        String[] orderColumns = {"رقم الطلب", "تاريخ الطلب", "الحالة"};
+        ordersModel = new DefaultTableModel(orderColumns, 0);
+        ordersTable = new JTable(ordersModel);
+        ordersTable.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+        
+        // حدث عند اختيار طلب من الجدول
         ordersTable.getSelectionModel().addListSelectionListener(e -> {
             int row = ordersTable.getSelectedRow();
-            if (row != -1) loadOrderDetails((int) ordersModel.getValueAt(row, 0));
+            if (row != -1) {
+                int id = (int) ordersModel.getValueAt(row, 0);
+                loadOrderDetails(id);
+            }
         });
         
         topPanel.add(new JScrollPane(ordersTable), BorderLayout.CENTER);
         
-        // أزرار التحكم
-        JPanel buttons = new JPanel();
-        JButton btnReady = new JButton("Mark as Ready ✅");
-        JButton btnRefresh = new JButton("Refresh Orders 🔄");
-        btnReady.setBackground(ACCENT_PINK);
-        btnReady.setForeground(Color.WHITE);
-        JButton btnLogout = new JButton("Logout ↩️");
-        btnLogout.setBackground(new Color(189, 189, 189)); // لون رمادي مثل واجهة المدير
-        btnLogout.setForeground(Color.BLACK);
+        // منطقة الأزرار
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        buttons.setOpaque(false);
 
-        // برمجة فعل زر الخروج
+        JButton btnReady = createStyledButton("تجهيز الطلب ✅", ACCENT_PINK);
+        JButton btnRefresh = createStyledButton("تحديث القائمة 🔄", new Color(100, 181, 246));
+        JButton btnLogout = createStyledButton("خروج ↩️", new Color(189, 189, 189));
+
+        btnReady.addActionListener(e -> markReady());
+        btnRefresh.addActionListener(e -> loadPendingOrders());
         btnLogout.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to logout?", "Logout", JOptionPane.YES_NO_OPTION);
+            int confirm = JOptionPane.showConfirmDialog(this, "هل تريد تسجيل الخروج؟", "تأكيد", JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
-                this.dispose(); // إغلاق واجهة الشيف
-                new CustomerHome(); // العودة لشاشة الدخول
+                this.dispose();
+                new CustomerHome();
             }
         });
         
-        btnReady.addActionListener(e -> markReady());
-        btnRefresh.addActionListener(e -> loadPendingOrders());
-        
+        buttons.add(btnLogout);
         buttons.add(btnRefresh);
         buttons.add(btnReady);
-        buttons.add(btnLogout);
         topPanel.add(buttons, BorderLayout.SOUTH);
 
-        // --- النصف السفلي: تفاصيل الطلب المختار ---
+        // --- 2. النصف السفلي: تفاصيل الطلب المختار ---
         JPanel bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.setBorder(BorderFactory.createTitledBorder("Items to Prepare"));
-        detailsModel = new DefaultTableModel(new String[]{"Product", "Quantity"}, 0);
+        bottomPanel.setOpaque(false);
+        bottomPanel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(ACCENT_PINK), " الأصناف المطلوب تحضيرها 🍰 ", 
+            2, 0, new Font(Font.DIALOG, Font.BOLD, 14), ACCENT_PINK));
+
+        String[] detailColumns = {"اسم المنتج", "الكمية المطلوبة"};
+        detailsModel = new DefaultTableModel(detailColumns, 0);
         detailsTable = new JTable(detailsModel);
+        detailsTable.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+        
         bottomPanel.add(new JScrollPane(detailsTable), BorderLayout.CENTER);
 
         add(topPanel);
@@ -78,31 +102,58 @@ public class ChefDashboard extends JFrame {
     private void loadPendingOrders() {
         ordersModel.setRowCount(0);
         detailsModel.setRowCount(0);
-        try (ResultSet rs = DatabaseManager.getPendingSales()) {
+        // استخدام الخدمة لجلب البيانات
+        ResultSet rs = salesService.getOrdersForChef();
+        try {
             while (rs != null && rs.next()) {
-                ordersModel.addRow(new Object[]{rs.getInt("id"), rs.getString("sale_date"), rs.getString("status")});
+                ordersModel.addRow(new Object[]{
+                    rs.getInt("id"), 
+                    rs.getString("sale_date"), 
+                    "قيد التحضير"
+                });
             }
         } catch (Exception e) { e.printStackTrace(); }
     }
 
     private void loadOrderDetails(int saleId) {
         detailsModel.setRowCount(0);
-        try (ResultSet rs = DatabaseManager.getSaleItems(saleId)) {
+        // استخدام الخدمة لجلب التفاصيل
+        ResultSet rs = salesService.getItemsBySaleId(saleId);
+        try {
             while (rs != null && rs.next()) {
-                detailsModel.addRow(new Object[]{rs.getString("product_name"), rs.getInt("quantity")});
+                detailsModel.addRow(new Object[]{
+                    rs.getString("product_name"), 
+                    rs.getInt("quantity")
+                });
             }
         } catch (Exception e) { e.printStackTrace(); }
     }
 
     private void markReady() {
         int row = ordersTable.getSelectedRow();
-        if (row == -1) return;
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "يرجى اختيار طلب أولاً!");
+            return;
+        }
         int id = (int) ordersModel.getValueAt(row, 0);
         try {
-            DatabaseManager.updateSaleStatus(id);
-            JOptionPane.showMessageDialog(this, "Order #" + id + " is ready for delivery!");
+            // تنفيذ الأمر عبر طبقة الخدمة
+            salesService.markOrderAsReady(id);
+            JOptionPane.showMessageDialog(this, "تم تحديث الطلب رقم #" + id + " إلى جاهز بنجاح!");
             loadPendingOrders();
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "خطأ: " + e.getMessage());
+        }
+    }
+
+    private JButton createStyledButton(String text, Color bg) {
+        JButton btn = new JButton(text);
+        btn.setBackground(bg);
+        btn.setForeground(Color.BLACK);
+        btn.setFont(new Font(Font.DIALOG, Font.BOLD, 13));
+        btn.setPreferredSize(new Dimension(160, 35));
+        btn.setFocusPainted(false);
+        return btn;
     }
 }
 

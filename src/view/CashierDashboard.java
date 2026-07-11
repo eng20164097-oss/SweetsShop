@@ -1,298 +1,254 @@
 package view;
 
 import javax.swing.*;
+import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.sql.ResultSet;
 import java.util.ArrayList;
-import db.DatabaseManager;
+import java.util.Locale;
 import model.OrderItem;
+import model.Product;
+import service.ProductService; // استيراد طبقة الخدمة
+import service.SalesService;   // استيراد طبقة الخدمة
 
+/**
+ * Layer 1: Presentation Layer (GUI).
+ * واجهة الكاشير (نقطة البيع) - تدعم المعمارية الرباعية والتعريب الكامل.
+ */
 public class CashierDashboard extends JFrame {
-    private JTable menuTable, cartTable;
-    private DefaultTableModel menuModel, cartModel;
+    private JTable menuTable, cartTable, readyTable;
+    private DefaultTableModel menuModel, cartModel, readyModel;
     private JLabel totalLabel;
     private double grandTotal = 0;
     private ArrayList<OrderItem> cartItems = new ArrayList<>();
     private String cashierName;
-    private JTable readyTable;
-    private DefaultTableModel readyModel;
 
+    // تعريف الخدمات (Layers Integration)
+    private ProductService productService = new ProductService();
+    private SalesService salesService = new SalesService();
 
     private final Color ACCENT_PINK = new Color(240, 98, 146);
     private final Color LIGHT_PINK = new Color(252, 228, 236);
 
     public CashierDashboard(String name) {
         this.cashierName = name;
-        setTitle("Sweets Shop POS - Cashier: " + name);
-        setSize(1000, 600);
+        setTitle("نظام مبيعات متجر الحلويات - [الكاشير: " + name + "]");
+        setSize(1100, 700);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(10, 10));
+        
+        // ضبط اتجاه النافذة لليمين
+        applyComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
 
-        // 1. الشريط العلوي
+        // 1. الشريط العلوي (Header)
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(ACCENT_PINK);
-        JLabel title = new JLabel("  Point of Sale (POS System)", JLabel.LEFT);
+        header.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        JLabel title = new JLabel("نقطة البيع الرقمية (POS System)", JLabel.RIGHT);
         title.setForeground(Color.WHITE);
-        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        JButton btnLogout = new JButton("Logout ↩️");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        
+        JButton btnLogout = new JButton("تسجيل الخروج ↩️");
+        btnLogout.setFont(new Font(Font.DIALOG, Font.BOLD, 14));
+        btnLogout.setFocusPainted(false);
         btnLogout.addActionListener(e -> {
-    this.dispose();
-    new CustomerHome(); // يعود للواجهة الرئيسية للزبائن
-    });
+            this.dispose();
+            new CustomerHome();
+        });
 
-        header.add(title, BorderLayout.WEST);
-        header.add(btnLogout, BorderLayout.EAST);
+        header.add(title, BorderLayout.EAST);
+        header.add(btnLogout, BorderLayout.WEST);
         add(header, BorderLayout.NORTH);
 
-        // 2. تقسيم الشاشة (المنيو جهة اليسار والسلة جهة اليمين)
-        JPanel mainPanel = new JPanel(new GridLayout(1, 2, 10, 0));
-        mainPanel.setBorder(new javax.swing.border.EmptyBorder(10, 10, 10, 10));
+        // 2. اللوحة الرئيسية (تقسيم الشاشة)
+        JPanel mainPanel = new JPanel(new GridLayout(1, 2, 15, 0));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // --- قسم المنيو ---
+        // --- أ. قسم المنيو (جهة اليمين في العربي) ---
         JPanel menuPanel = new JPanel(new BorderLayout());
-        menuPanel.setBorder(BorderFactory.createTitledBorder("Sweet Menu"));
-        menuModel = new DefaultTableModel(new String[] { "ID", "Name", "Price", "Stock" }, 0);
+        menuPanel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(ACCENT_PINK), " قائمة الحلويات المتاحة 🍰 ", 
+            TitledBorder.RIGHT, 0, new Font(Font.DIALOG, Font.BOLD, 14), ACCENT_PINK));
+        
+        menuModel = new DefaultTableModel(new String[]{"الرقم", "اسم الصنف", "السعر", "المخزون"}, 0);
         menuTable = new JTable(menuModel);
-        JButton btnAddToCart = new JButton("Add to Cart 🛒");
-        btnAddToCart.setBackground(new Color(102, 187, 106));
+        menuTable.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+        
+        JButton btnAddToCart = new JButton("إضافة للسلة 🛒");
+        btnAddToCart.setBackground(new Color(102, 187, 106)); // أخضر
         btnAddToCart.setForeground(Color.WHITE);
+        btnAddToCart.setFont(new Font(Font.DIALOG, Font.BOLD, 16));
+        
         menuPanel.add(new JScrollPane(menuTable), BorderLayout.CENTER);
         menuPanel.add(btnAddToCart, BorderLayout.SOUTH);
 
-        // --- قسم السلة ---
-        JPanel cartPanel = new JPanel(new BorderLayout());
-        cartPanel.setBorder(BorderFactory.createTitledBorder("Current Order (Cart)"));
-        cartModel = new DefaultTableModel(new String[] { "Name", "Qty", "Subtotal" }, 0);
-        cartTable = new JTable(cartModel);
-        totalLabel = new JLabel("Total: 0.00 LYD", JLabel.RIGHT);
-        totalLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        JButton btnCheckout = new JButton("Complete Sale & Print 🧾");
-        btnCheckout.setBackground(ACCENT_PINK);
-        btnCheckout.setForeground(Color.WHITE);
-        btnCheckout.setFont(new Font("Segoe UI", Font.BOLD, 16));
-                // --- قسم الطلبات الجاهزة للتسليم ---
-        JPanel readyPanel = new JPanel(new BorderLayout());
-        readyPanel.setBorder(BorderFactory.createTitledBorder("Orders Ready for Pickup ✅"));
-        readyPanel.setPreferredSize(new Dimension(300, 150)); // حجم صغير بالأسفل
+        // --- ب. قسم السلة والطلبات الجاهزة (جهة اليسار) ---
+        JPanel rightSidePanel = new JPanel(new BorderLayout(0, 10));
         
-        readyModel = new DefaultTableModel(new String[]{"ID", "Time"}, 0);
+        // جدول الطلبات الجاهزة للتسليم
+JPanel readyPanel = new JPanel(new BorderLayout());
+        readyPanel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(Color.GRAY), " طلبات جاهزة للتسليم ✅ ", 
+            TitledBorder.RIGHT, 0, new Font(Font.DIALOG, Font.BOLD, 14), Color.DARK_GRAY));
+        readyPanel.setPreferredSize(new Dimension(0, 200));
+        
+        readyModel = new DefaultTableModel(new String[]{"رقم الطلب", "وقت الطلب"}, 0);
         readyTable = new JTable(readyModel);
+        readyTable.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
         
-        JButton btnDelivered = new JButton("Hand Over to Customer 🧁");
-        btnDelivered.setBackground(new Color(102, 187, 106)); // لون أخضر للتسليم
-        btnDelivered.setForeground(Color.WHITE);
+        JButton btnHandOver = new JButton("تسليم الطلب للزبون 🍰");
+        btnHandOver.setBackground(new Color(100, 181, 246)); // أزرق
+        btnHandOver.setFont(new Font(Font.DIALOG, Font.BOLD, 14));
         
         readyPanel.add(new JScrollPane(readyTable), BorderLayout.CENTER);
-        readyPanel.add(btnDelivered, BorderLayout.SOUTH);
+        readyPanel.add(btnHandOver, BorderLayout.SOUTH);
 
-        // إضافة هذا القسم أسفل لوحة السلة (اليمين)
-        cartPanel.add(readyPanel, BorderLayout.NORTH); // سنضعه في الأعلى أو الأسفل حسب تنسيقك
-
-
-                // إنشاء أزرار التحكم في السلة
-        JButton btnRemove = new JButton("Remove Selected ❌");
-        btnRemove.setBackground(new Color(229, 115, 115)); // لون أحمر هادئ
+        // جدول سلة التسوق الحالية
+        JPanel cartPanel = new JPanel(new BorderLayout());
+        cartPanel.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(ACCENT_PINK), " سلة الطلب الحالي 🛒 ", 
+            TitledBorder.RIGHT, 0, new Font(Font.DIALOG, Font.BOLD, 14), ACCENT_PINK));
+        
+        cartModel = new DefaultTableModel(new String[]{"الصنف", "الكمية", "المجموع"}, 0);
+        cartTable = new JTable(cartModel);
+        cartTable.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+        
+        totalLabel = new JLabel("الإجمالي: 0.00 دينار", JLabel.CENTER);
+        totalLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        
+        JButton btnRemove = new JButton("حذف الصنف ❌");
+        btnRemove.setBackground(new Color(229, 115, 115));
         btnRemove.setForeground(Color.WHITE);
-        // وضع الأزرار في لوحة منظمة
+        
+        JButton btnCheckout = new JButton("إتمام البيع وطباعة الفاتورة 💰");
+        btnCheckout.setBackground(ACCENT_PINK);
+        btnCheckout.setForeground(Color.WHITE);
+        btnCheckout.setFont(new Font(Font.DIALOG, Font.BOLD, 18));
+
         JPanel cartButtons = new JPanel(new GridLayout(2, 1, 5, 5));
-        cartButtons.setOpaque(false);
         cartButtons.add(btnRemove);
         cartButtons.add(btnCheckout);
-        JPanel cartBottom = new JPanel(new BorderLayout());
+
+        JPanel cartBottom = new JPanel(new BorderLayout(5, 5));
         cartBottom.add(totalLabel, BorderLayout.NORTH);
         cartBottom.add(cartButtons, BorderLayout.SOUTH);
+
         cartPanel.add(new JScrollPane(cartTable), BorderLayout.CENTER);
         cartPanel.add(cartBottom, BorderLayout.SOUTH);
-        mainPanel.add(menuPanel);
-        mainPanel.add(cartPanel);
+
+        rightSidePanel.add(readyPanel, BorderLayout.NORTH);
+        rightSidePanel.add(cartPanel, BorderLayout.CENTER);
+
+        mainPanel.add(menuPanel); // المنيو يمين
+        mainPanel.add(rightSidePanel); // السلة والجاهز يسار
         add(mainPanel, BorderLayout.CENTER);
+
         // --- تفعيل الأزرار ---
         btnAddToCart.addActionListener(e -> addToCart());
         btnCheckout.addActionListener(e -> processCheckout());
-// تفعيل زر الحذف
         btnRemove.addActionListener(e -> removeFromCart());
-        // ابحثي عن زر btnDelivered وأضيفي له هذا السطر
-        btnDelivered.addActionListener(e -> markAsDelivered());
+        btnHandOver.addActionListener(e -> markAsDelivered());
 
         loadMenu();
         setVisible(true);
     }
 
-    /**
-     * Loads the sweets menu from the database and displays it in the table.
-     * Uses the new List-based approach to avoid database locking.
-     */
     private void loadMenu() {
-        menuModel.setRowCount(0); // مسح الجدول القديم
-
-        // استدعاء الميثود الجديدة التي تعيد ArrayList من الكائنات
-        java.util.ArrayList<model.Product> products = db.DatabaseManager.getAllProductsList();
-
-        if (products != null) {
-            for (model.Product p : products) {
-                // إضافة البيانات للجدول من كائن المنتج مباشرة
-                menuModel.addRow(new Object[] {
-                        p.getId(),
-                        p.getName(),
-                        String.format(java.util.Locale.US, "%.2f", p.getPrice()),
-                        p.getStockQuantity()
-                });
-            }
-        }
-        loadReadyOrders(); // هذا السطر سيجبر الجدول العلوي على الانتعاش وظهور طلبات الشيف
-    }
-
-    private void addToCart() {
-        int row = menuTable.getSelectedRow();
-        if (row == -1) {
-            JOptionPane.showMessageDialog(this, "Please select an item from the menu!");
-            return;
-        }
-
-        try {
-            // قراءة البيانات بطريقة آمنة تمنع خطأ "Invalid quantity"
-            int id = Integer.parseInt(menuModel.getValueAt(row, 0).toString());
-            String name = menuModel.getValueAt(row, 1).toString();
-            double price = Double.parseDouble(menuModel.getValueAt(row, 2).toString());
-            int stock = Integer.parseInt(menuModel.getValueAt(row, 3).toString());
-
-            String qtyStr = JOptionPane.showInputDialog(this, "Enter Quantity for " + name + ":", "1");
-            if (qtyStr == null || qtyStr.isEmpty())
-                return;
-
-            int qty = Integer.parseInt(qtyStr);
-
-            if (qty <= 0) {
-                JOptionPane.showMessageDialog(this, "Quantity must be greater than zero!");
-                return;
-            }
-
-            if (qty > stock) {
-                JOptionPane.showMessageDialog(this, "Not enough stock! Available: " + stock, "Error",
-                        JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            // حساب القيم وإضافتها للسلة
-            double subtotal = price * qty;
-            cartItems.add(new OrderItem(id, name, qty, price));
-            cartModel.addRow(new Object[]{
-                name, 
-                qty, 
-                String.format(java.util.Locale.US, "%.2f", subtotal) 
+        menuModel.setRowCount(0);
+        ArrayList<Product> products = productService.getAllProducts();
+        for (Product p : products) {
+            menuModel.addRow(new Object[]{
+                p.getId(), p.getName(), 
+                String.format(Locale.US, "%.2f", p.getPrice()), 
+                p.getStockQuantity()
             });
-
-            grandTotal += subtotal;
-            totalLabel.setText("Total: " + String.format(java.util.Locale.US, "%.2f", grandTotal) + " LYD");
-
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Please enter a valid number for quantity!");
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error adding to cart: " + e.getMessage());
-            e.printStackTrace();
         }
-    }
-
-        private void processCheckout() {
-        if (cartItems.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Your cart is empty!");
-            return;
-        }
-
-        int confirm = JOptionPane.showConfirmDialog(this, "Total: " + grandTotal + " LYD. Process payment?", "Checkout", JOptionPane.YES_NO_OPTION);
-        if (confirm == JOptionPane.YES_OPTION) {
-            try {
-                // استدعاء ميثود الحفظ التي برمجناها في DatabaseManager
-                db.DatabaseManager.saveSale(cashierName, grandTotal, cartItems);
-                
-                JOptionPane.showMessageDialog(this, "Sale Completed! Invoice saved to database.");
-                    // إنشاء كائن الفاتورة وطباعته في ملف
-                model.Invoice receipt = new model.Invoice(cashierName, new java.util.ArrayList<>(cartItems), grandTotal);
-                 receipt.generateReceiptFile();
-
-                
-                // تنظيف الواجهة لبدء زبون جديد
-                cartItems.clear();
-                cartModel.setRowCount(0);
-                grandTotal = 0;
-                totalLabel.setText("Total: 0.00 LYD");
-                loadMenu(); // لتحديث المخزن أمام الكاشير
-
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Checkout Error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-
-        /**
-     * Removes the selected item from the shopping cart and updates the total price.
-     */
-        private void removeFromCart() {
-            int selectedRow = cartTable.getSelectedRow();
-        
-        // 1. التحقق من الاختيار
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Please select an item from the cart to remove!");
-            return;
-        }
-
-        try {
-            // 2. الحل الذكي: الحصول على السعر من القائمة البرمجية مباشرة وليس من نص الجدول
-            // هذا يتجنب مشكلة الأرقام العربية تماماً
-            model.OrderItem itemToRemove = cartItems.get(selectedRow);
-            double amountToSubtract = itemToRemove.getSubTotal();
-
-            // 3. تحديث المجموع الكلي
-            grandTotal -= amountToSubtract;
-            if (grandTotal < 0.01) grandTotal = 0; // تأمين الحسابات
-            
-            // تحديث النص في الواجهة (نستخدم Locale.US لضمان ظهور الأرقام بالصيغة البرمجية)
-            totalLabel.setText("Total: " + String.format(java.util.Locale.US, "%.2f", grandTotal) + " LYD");
-
-            // 4. الحذف الفعلي من القائمة ومن الجدول
-            cartItems.remove(selectedRow);
-            cartModel.removeRow(selectedRow);
-
-            System.out.println("Item removed successfully.");
-
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error during removal: " + e.getMessage());
-        }
+        loadReadyOrders();
     }
 
     private void loadReadyOrders() {
         readyModel.setRowCount(0);
-        java.util.ArrayList<Object[]> orders = db.DatabaseManager.getReadyOrdersList();
+        ArrayList<Object[]> orders = salesService.getReadyOrders();
         for (Object[] row : orders) {
             readyModel.addRow(row);
         }
     }
 
-        private void markAsDelivered() {
-        int row = readyTable.getSelectedRow();
+    private void addToCart() {
+        int row = menuTable.getSelectedRow();
         if (row == -1) {
-            JOptionPane.showMessageDialog(this, "Please select an order to deliver!");
+            JOptionPane.showMessageDialog(this, "يرجى اختيار صنف من المنيو!");
             return;
         }
-
-        int id = (int) readyModel.getValueAt(row, 0);
         try {
-            db.DatabaseManager.markAsDelivered(id);
-            
-            // صياغة المسج الجديد (أكثر احترافية للكاشير)
-            JOptionPane.showMessageDialog(this, 
-                "Success! Order #" + id + " has been handed over and marked as COMPLETED.", 
-                "Delivery Confirmed", 
-                JOptionPane.INFORMATION_MESSAGE);
-            
-            loadReadyOrders(); // تحديث الجدول فوراً
+            int id = Integer.parseInt(menuModel.getValueAt(row, 0).toString());
+            String name = menuModel.getValueAt(row, 1).toString();
+            double price = Double.parseDouble(menuModel.getValueAt(row, 2).toString());
+            int stock = Integer.parseInt(menuModel.getValueAt(row, 3).toString());
+
+            String qtyStr = JOptionPane.showInputDialog(this, "أدخل الكمية لـ " + name + ":", "1");
+            if (qtyStr == null || qtyStr.isEmpty()) return;
+            int qty = Integer.parseInt(qtyStr);
+
+            if (qty <= 0) throw new Exception("الكمية يجب أن تكون أكبر من صفر");
+            if (qty > stock) throw new Exception("عذراً، المخزون لا يكفي!");
+
+            double subtotal = price * qty;
+            cartItems.add(new OrderItem(id, name, qty, price));
+            cartModel.addRow(new Object[]{name, qty, String.format(Locale.US, "%.2f", subtotal)});
+            grandTotal += subtotal;
+            totalLabel.setText("الإجمالي: " + String.format(Locale.US, "%.2f", grandTotal) + " دينار");
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error updating status: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "خطأ: " + e.getMessage(), "خطأ في الإدخال", JOptionPane.ERROR_MESSAGE);
         }
     }
 
+    private void removeFromCart() {
+        int row = cartTable.getSelectedRow();
+        if (row == -1) return;
+        OrderItem item = cartItems.get(row);
+        grandTotal -= item.getSubTotal();
+        totalLabel.setText("الإجمالي: " + String.format(Locale.US, "%.2f", grandTotal) + " دينار");
+        cartItems.remove(row);
+        cartModel.removeRow(row);
+    }
 
+    private void processCheckout() {
+        if (cartItems.isEmpty()) return;
+        int confirm = JOptionPane.showConfirmDialog(this, "هل تريد إتمام عملية البيع؟", "تأكيد", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                // استدعاء طبقة الخدمة
+                salesService.completeSale(cashierName, grandTotal, cartItems);
+                
+                // طباعة الفاتورة (File I/O)
+                new model.Invoice(cashierName, new ArrayList<>(cartItems), grandTotal).generateReceiptFile();
+                
+                JOptionPane.showMessageDialog(this, "تمت العملية بنجاح وتم طباعة الفاتورة");
+                cartItems.clear();
+                cartModel.setRowCount(0);
+                grandTotal = 0;
+                totalLabel.setText("الإجمالي: 0.00 دينار");
+                loadMenu();
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "فشلت العملية: " + e.getMessage());
+            }
+        }
+    }
 
+    private void markAsDelivered() {
+        int row = readyTable.getSelectedRow();
+        if (row == -1) return;
+        int id = (int) readyModel.getValueAt(row, 0);
+        try {
+            salesService.finishDelivery(id);
+            JOptionPane.showMessageDialog(this, "تم تسليم الطلب رقم " + id + " وإغلاقه بنجاح.");
+            loadReadyOrders();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "خطأ: " + e.getMessage());
+        }
+    }
 }
+

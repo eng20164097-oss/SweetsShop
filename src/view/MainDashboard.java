@@ -4,219 +4,179 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.sql.ResultSet;
-import db.DatabaseManager;
+import java.util.ArrayList;
+import java.util.Locale;
+import model.Product;
+import service.ProductService; // استيراد طبقة الخدمة
+import service.UserService;    // استيراد طبقة الخدمة
 
+/**
+ * Layer 1: Presentation Layer (GUI).
+ * لوحة التحكم الرئيسية للمدير - تدعم المعمارية الرباعية واللغة العربية.
+ */
 public class MainDashboard extends JFrame {
     private final Color ACCENT_PINK = new Color(240, 98, 146);
     private final Color LIGHT_PINK = new Color(252, 228, 236);
     private final Color MODERN_GRAY = new Color(84, 110, 122); 
 
+    // تعريف طبقات الخدمة (Business Logic Layer)
+    private ProductService productService = new ProductService();
+    private UserService userService = new UserService();
     
-    // جداول البيانات
     private JTable productTable, staffTable;
     private DefaultTableModel productModel, staffModel;
 
     public MainDashboard(String role) {
-        setTitle("Sweets Shop Management System - [" + role + "]");
-        setSize(900, 600);
+        // إعدادات النافذة المعربة
+        setTitle("نظام إدارة متجر الحلويات - [لوحة " + role + "]");
+        setSize(1000, 650);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+        getContentPane().setLayout(new BorderLayout());
 
-        // إنشاء نظام التبويبات
-        JTabbedPane tabbedPane = new JTabbedPane();
-        // غيري هذا السطر في كود MainDashboard
-        tabbedPane.setFont(new Font("Segoe UI Emoji", Font.BOLD, 14)); 
-        tabbedPane.setBackground(Color.WHITE);
-        tabbedPane.setForeground(ACCENT_PINK);
-
-        // إضافة التبويبات
-        tabbedPane.addTab("Inventory Management 🧁 🍰", createInventoryPanel());
-        tabbedPane.addTab("Staff Management 👥", createStaffPanel());
-        // --- إنشاء الشريط العلوي (Top Header Bar) ---
+        // 1. الشريط العلوي (Header)
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(Color.WHITE);
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
 
-        // نص يوضح من المستخدم الحالي
-        JLabel userLabel = new JLabel("User: " + role + " | Sweets Shop Management");
-        userLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+        JLabel userLabel = new JLabel("المستخدم الحالي: " + role);
+        userLabel.setFont(new Font(Font.DIALOG, Font.BOLD, 14));
         userLabel.setForeground(MODERN_GRAY);
 
-        // إنشاء زر تسجيل الخروج
-        JButton btnLogout = new JButton("Logout ↩️");
-        btnLogout.setBackground(new Color(189, 189, 189)); // لون رمادي هادئ للLogout
-        btnLogout.setForeground(Color.BLACK);
+        JButton btnLogout = new JButton("تسجيل الخروج ↩️");
+        btnLogout.setBackground(new Color(189, 189, 189));
+        // 1. السطر الذي سيخفي المستطيل الداخلي تماماً
         btnLogout.setFocusPainted(false);
-        // استخدمي هذا الكود لضمان ظهور السهم
-        btnLogout.setFont(new Font("Segoe UI Symbol", Font.BOLD, 14)); // غيرنا الخط هنا
-        btnLogout.setText("Logout \u21A9"); // استخدمنا الكود البرمجي للسهم لضمان ظهوره
 
+        Font modernFont = new Font(Font.DIALOG, Font.BOLD, 14);
+        btnLogout.setFont(modernFont);
         btnLogout.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // برمجة فعل زر الخروج
         btnLogout.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to logout?", "Logout", JOptionPane.YES_NO_OPTION);
+            int confirm = JOptionPane.showConfirmDialog(this, "هل أنت متأكد من تسجيل الخروج؟", "تأكيد", JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
-                this.dispose(); // إغلاق لوحة التحكم
-                new CustomerHome(); // فتح شاشة الدخول مرة أخرى
+                this.dispose();
+                new CustomerHome(); // العودة للواجهة الرئيسية
             }
         });
 
-        headerPanel.add(userLabel, BorderLayout.WEST);
-        headerPanel.add(btnLogout, BorderLayout.EAST);
-
-        // إضافة الشريط العلوي في أعلى النافذة
+        headerPanel.add(userLabel, BorderLayout.EAST); // لليمين
+        headerPanel.add(btnLogout, BorderLayout.WEST); // لليسار
         add(headerPanel, BorderLayout.NORTH);
-        // ------------------------------------------
 
-        add(tabbedPane);
+        // 2. نظام التبويبات المعرب
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(modernFont);
+        tabbedPane.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+
+        tabbedPane.addTab("إدارة المخزون 🍰", createInventoryPanel());
+        tabbedPane.addTab("إدارة الموظفين 👥", createStaffPanel());
+
+        add(tabbedPane, BorderLayout.CENTER);
+
         loadProductData();
         loadStaffData();
         setVisible(true);
     }
 
-      // 1. لوحة إدارة المخزون المحدثة
-    
+    // لوحة إدارة المخزون
     private JPanel createInventoryPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(LIGHT_PINK);
 
-        String[] columns = {"ID", "Name", "Price", "Stock"};
+        // رؤوس الجداول بالعربي
+        String[] columns = {"الرقم", "اسم الصنف", "السعر (دينار)", "الكمية المتوفرة"};
         productModel = new DefaultTableModel(columns, 0);
         productTable = new JTable(productModel);
-        
-        // --- الخطوة المهمة: ننشئ اللوحة أولاً قبل استدعائها ---
-        JPanel bottomButtons = new JPanel(new FlowLayout());
-        bottomButtons.setBackground(LIGHT_PINK);
+        productTable.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+        JPanel bottomButtons = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        bottomButtons.setOpaque(false);
 
-        // --- ثم ننشئ الأزرار ---
-        JButton btnAdd = createStyledButton("Add New Sweet");
-        JButton btnEdit = createStyledButton("Edit Selected");
-        JButton btnDelete = createStyledButton("Delete Selected");
-        JButton btnRefresh = createStyledButton("Refresh List");
+        JButton btnAdd = createStyledButton("إضافة صنف");
+        JButton btnEdit = createStyledButton("تعديل");
+        JButton btnDelete = createStyledButton("حذف");
+        JButton btnRefresh = createStyledButton("تحديث القائمة");
 
-        // --- ثم نربط الأزرار بالأوامر ---
         btnAdd.addActionListener(e -> addNewProduct());
         btnEdit.addActionListener(e -> editSelectedProduct());
         btnDelete.addActionListener(e -> deleteSelectedProduct());
         btnRefresh.addActionListener(e -> loadProductData());
 
-        // --- الآن نضيف الأزرار للوحة بدون أخطاء ---
-        bottomButtons.add(btnAdd);
-        bottomButtons.add(btnEdit);
-        bottomButtons.add(btnDelete);
         bottomButtons.add(btnRefresh);
+        bottomButtons.add(btnDelete);
+        bottomButtons.add(btnEdit);
+        bottomButtons.add(btnAdd);
 
-        // --- وأخيراً نجمع كل شيء في اللوحة الكبيرة ---
         panel.add(new JScrollPane(productTable), BorderLayout.CENTER);
         panel.add(bottomButtons, BorderLayout.SOUTH);
-        
         return panel;
     }
 
-
-    // 2. لوحة إدارة الموظفين المحدثة
-        private JPanel createStaffPanel() {
+    // لوحة إدارة الموظفين
+    private JPanel createStaffPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(LIGHT_PINK);
 
-        String[] columns = {"ID", "Name", "Role"};
+        String[] columns = {"رقم الموظف", "الاسم", "الوظيفة"};
         staffModel = new DefaultTableModel(columns, 0);
         staffTable = new JTable(staffModel);
+        staffTable.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
 
-        JPanel bottomButtons = new JPanel(new FlowLayout());
-        bottomButtons.setBackground(LIGHT_PINK);
+        JPanel bottomButtons = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        bottomButtons.setOpaque(false);
 
-        JButton btnAddStaff = createStyledButton("Add Staff");
-        JButton btnEditStaff = createStyledButton("Edit Staff");
-        JButton btnDeleteStaff = createStyledButton("Delete Staff");
-        JButton btnRefreshStaff = createStyledButton("Refresh Staff");
+        JButton btnAddStaff = createStyledButton("إضافة موظف");
+        JButton btnEditStaff = createStyledButton("تعديل بيانات");
+        JButton btnDeleteStaff = createStyledButton("حذف موظف");
+        JButton btnRefreshStaff = createStyledButton("تحديث القائمة");
 
-        // ربط الأزرار بالأوامر
         btnAddStaff.addActionListener(e -> addNewStaff());
         btnEditStaff.addActionListener(e -> editSelectedStaff());
         btnDeleteStaff.addActionListener(e -> deleteSelectedStaff());
         btnRefreshStaff.addActionListener(e -> loadStaffData());
 
-        bottomButtons.add(btnAddStaff);
-        bottomButtons.add(btnEditStaff);
-        bottomButtons.add(btnDeleteStaff);
         bottomButtons.add(btnRefreshStaff);
+        bottomButtons.add(btnDeleteStaff);
+        bottomButtons.add(btnEditStaff);
+        bottomButtons.add(btnAddStaff);
 
         panel.add(new JScrollPane(staffTable), BorderLayout.CENTER);
         panel.add(bottomButtons, BorderLayout.SOUTH);
         return panel;
     }
 
-
-
-    // ميثود إضافة منتج (مع Exception Handling)
-        private void addNewProduct() {
+    private void addNewProduct() {
         try {
-            // 1. طلب اسم الحلوى
-            String name = JOptionPane.showInputDialog(this, "Enter Sweet Name:");
+            String name = JOptionPane.showInputDialog(this, "اسم الصنف الجديد:");
             if (name == null || name.isEmpty()) return;
 
-            // 2. طلب السعر
-            String priceStr = JOptionPane.showInputDialog(this, "Enter Price:");
-            if (priceStr == null) return;
+            String priceStr = JOptionPane.showInputDialog(this, "السعر:");
             double price = Double.parseDouble(priceStr);
 
-            // 3. طلب الكمية
-            String stockStr = JOptionPane.showInputDialog(this, "Enter Stock Quantity:");
-            if (stockStr == null) return;
+            String stockStr = JOptionPane.showInputDialog(this, "الكمية:");
             int stock = Integer.parseInt(stockStr);
 
-            // 4. طلب اسم ملف الصورة 
-            String imageName = JOptionPane.showInputDialog(this, "Enter Image File Name (e.g., cake.jpg):", "cake.jpg");
-            if (imageName == null || imageName.isEmpty()) imageName = "default.jpg";
-
-            // 5. استدعاء ميثود الإضافة من DatabaseManager
-            db.DatabaseManager.addProduct(name, price, stock, imageName);
+            String imageName = JOptionPane.showInputDialog(this, "اسم ملف الصورة (مثال: cake.jpg):", "cake.jpg");
             
-            // 6. تحديث الجدول ورسالة نجاح
+            // استدعاء طبقة الخدمة (Layer 2)
+            productService.saveProduct(name, price, stock, imageName);
+            
             loadProductData();
-            JOptionPane.showMessageDialog(this, "Sweet and Image added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
-
-        } catch (NumberFormatException ex) {
-            // معالجة خطأ إدخال نص بدلاً من رقم
-            JOptionPane.showMessageDialog(this, "Error: Price and Stock must be numbers!", "Input Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "تم إضافة الصنف بنجاح!");
         } catch (Exception ex) {
-            // معالجة أي أخطاء أخرى (مثل قاعدة البيانات)
-            JOptionPane.showMessageDialog(this, "Database Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "خطأ في البيانات: " + ex.getMessage(), "خطأ", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-
-    // ميثود إضافة موظف (مع Exception Handling)
-    private void addNewStaff() {
-        try {
-            String name = JOptionPane.showInputDialog(this, "Enter Staff Name:");
-            if (name == null || name.isEmpty()) return;
-
-            String[] roles = {"Manager", "Cashier", "Chef"};
-            String role = (String) JOptionPane.showInputDialog(this, "Select Role:", "Role", JOptionPane.QUESTION_MESSAGE, null, roles, roles[1]);
-
-            String pass = JOptionPane.showInputDialog(this, "Set Password:");
-
-            DatabaseManager.addUser(name, role, pass);
-            loadStaffData();
-            JOptionPane.showMessageDialog(this, "Staff member added!");
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error adding staff: " + ex.getMessage());
-        }
-    }
-
-        private void loadProductData() {
+    private void loadProductData() {
         productModel.setRowCount(0);
-        // استدعاء الميثود الجديدة التي تعيد قائمة
-        java.util.ArrayList<model.Product> products = db.DatabaseManager.getAllProductsList();
-        
-        for (model.Product p : products) {
+        // نطلب البيانات من الخدمة وليس القاعدة مباشرة
+        ArrayList<Product> products = productService.getAllProducts();
+        for (Product p : products) {
             productModel.addRow(new Object[]{
                 p.getId(), 
                 p.getName(), 
-                String.format(java.util.Locale.US, "%.2f", p.getPrice()),
+                String.format(Locale.US, "%.2f", p.getPrice()),
                 p.getStockQuantity()
             });
         }
@@ -224,118 +184,138 @@ public class MainDashboard extends JFrame {
 
     private void loadStaffData() {
         staffModel.setRowCount(0);
-        try (ResultSet rs = DatabaseManager.getAllUsers()) {
+        try {
+            // نستخدم الخدمة لجلب الموظفين
+            ResultSet rs = userService.fetchAllUsers();
             while (rs != null && rs.next()) {
                 staffModel.addRow(new Object[]{rs.getInt("id"), rs.getString("name"), rs.getString("role")});
             }
         } catch (Exception e) { e.printStackTrace(); }
     }
 
+    private void deleteSelectedProduct() {
+        int row = productTable.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "يرجى اختيار صنف من الجدول أولاً!");
+            return;
+        }
+        int id = (int) productModel.getValueAt(row, 0);
+        int confirm = JOptionPane.showConfirmDialog(this, "هل أنت متأكد من حذف هذا الصنف؟", "تأكيد الحذف", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                productService.deleteProduct(id);
+                loadProductData();
+                JOptionPane.showMessageDialog(this, "تم الحذف بنجاح");
+            } catch (Exception ex) { JOptionPane.showMessageDialog(this, "خطأ: " + ex.getMessage()); }
+        }
+    }
+
+    private void addNewStaff() {
+        try {
+            String name = JOptionPane.showInputDialog(this, "اسم الموظف:");
+            if (name == null || name.isEmpty()) return;
+
+            String[] roles = {"Manager", "Cashier", "Chef"};
+            String role = (String) JOptionPane.showInputDialog(this, "اختر الوظيفة:", "الوظيفة", JOptionPane.QUESTION_MESSAGE, null, roles, roles[1]);
+
+            String pass = JOptionPane.showInputDialog(this, "كلمة المرور:");
+
+            userService.createStaff(name, role, pass);
+            loadStaffData();
+            JOptionPane.showMessageDialog(this, "تم إضافة الموظف بنجاح");
+        } catch (Exception ex) { JOptionPane.showMessageDialog(this, "خطأ: " + ex.getMessage()); }
+    }
+
     private JButton createStyledButton(String text) {
         JButton btn = new JButton(text);
         btn.setBackground(ACCENT_PINK);
         btn.setForeground(Color.WHITE);
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        btn.setPreferredSize(new Dimension(200, 40));
+        btn.setFont(new Font(Font.DIALOG, Font.BOLD, 13));
+        btn.setPreferredSize(new Dimension(140, 35));
+        btn.setFocusPainted(false);
         return btn;
     }
-        // 1. ميثود حذف الصنف المختار من الجدول
-    private void deleteSelectedProduct() {
-        int selectedRow = productTable.getSelectedRow();
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Please select a product from the table first!");
-            return;
-        }
-
-        int id = (int) productModel.getValueAt(selectedRow, 0);
-        int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this sweet?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
-        
-        if (confirm == JOptionPane.YES_OPTION) {
-            try {
-                db.DatabaseManager.deleteProduct(id); // تأكدي أنكِ أضفتِ هذه الميثود في DatabaseManager
-                loadProductData(); // تحديث الجدول فوراً
-                JOptionPane.showMessageDialog(this, "Deleted successfully!");
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage());
-            }
-        }
-    }
-
-    // 2. ميثود تعديل الصنف المختار
+    
+       // 1. ميثود تعديل بيانات منتج (باستخدام الخدمة)
     private void editSelectedProduct() {
-        int selectedRow = productTable.getSelectedRow();
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Please select a product to edit!");
+        int row = productTable.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "يرجى اختيار صنف لتعديله!");
             return;
         }
 
         try {
-            int id = (int) productModel.getValueAt(selectedRow, 0);
-            String oldName = (String) productModel.getValueAt(selectedRow, 1);
+            int id = (int) productModel.getValueAt(row, 0);
+            String oldName = (String) productModel.getValueAt(row, 1);
             
-            String newName = JOptionPane.showInputDialog(this, "Update Name:", oldName);
-            String newPrice = JOptionPane.showInputDialog(this, "Update Price:", productModel.getValueAt(selectedRow, 2));
-            String newStock = JOptionPane.showInputDialog(this, "Update Stock:", productModel.getValueAt(selectedRow, 3));
+            String newName = JOptionPane.showInputDialog(this, "تعديل الاسم:", oldName);
+            String newPrice = JOptionPane.showInputDialog(this, "تعديل السعر:", productModel.getValueAt(row, 2));
+            String newStock = JOptionPane.showInputDialog(this, "تعديل الكمية:", productModel.getValueAt(row, 3));
 
             if (newName != null && newPrice != null && newStock != null) {
-                db.DatabaseManager.updateProduct(id, newName, Double.parseDouble(newPrice), Integer.parseInt(newStock));
+                // نطلب من طبقة الخدمة تنفيذ التعديل
+                productService.updateProduct(id, newName, Double.parseDouble(newPrice), Integer.parseInt(newStock));
                 loadProductData();
-                JOptionPane.showMessageDialog(this, "Updated successfully!");
+                JOptionPane.showMessageDialog(this, "تم تحديث البيانات بنجاح");
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Invalid data. Please check your inputs.");
+            JOptionPane.showMessageDialog(this, "خطأ في إدخال البيانات!");
         }
     }
-        private void deleteSelectedStaff() {
-        int selectedRow = staffTable.getSelectedRow();
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Please select a staff member to delete!");
+
+    // 2. ميثود حذف موظف (باستخدام الخدمة)
+    private void deleteSelectedStaff() {
+        int row = staffTable.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "يرجى اختيار موظف لحذفه!");
             return;
         }
 
-        int id = (int) staffModel.getValueAt(selectedRow, 0);
-        
-        // منع حذف المدير الأساسي (أمان إضافي)
-        if (id == 1) {
-            JOptionPane.showMessageDialog(this, "Admin account cannot be deleted!", "Security", JOptionPane.WARNING_MESSAGE);
+        int id = (int) staffModel.getValueAt(row, 0);
+        if (id == 1) { // حماية حساب المدير الأساسي
+            JOptionPane.showMessageDialog(this, "لا يمكن حذف حساب المدير الأساسي!", "أمن النظام", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        int confirm = JOptionPane.showConfirmDialog(this, "Delete this employee?", "Confirm", JOptionPane.YES_NO_OPTION);
+        int confirm = JOptionPane.showConfirmDialog(this, "هل أنت متأكد من حذف هذا الموظف؟", "تأكيد", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             try {
-                db.DatabaseManager.deleteUser(id);
+                // نطلب من طبقة الخدمة الحذف
+                userService.removeStaff(id);
                 loadStaffData();
-                JOptionPane.showMessageDialog(this, "Staff deleted!");
+                JOptionPane.showMessageDialog(this, "تم حذف الموظف");
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage());
+                JOptionPane.showMessageDialog(this, "خطأ: " + ex.getMessage());
             }
         }
     }
 
+    // 3. ميثود تعديل بيانات موظف (باستخدام الخدمة)
     private void editSelectedStaff() {
-        int selectedRow = staffTable.getSelectedRow();
-if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Please select a staff member to edit!");
+        int row = staffTable.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "يرجى اختيار موظف لتعديل بياناته!");
             return;
         }
 
         try {
-            int id = (int) staffModel.getValueAt(selectedRow, 0);
-            String oldName = (String) staffModel.getValueAt(selectedRow, 1);
+            int id = (int) staffModel.getValueAt(row, 0);
+            String oldName = (String) staffModel.getValueAt(row, 1);
             
-            String newName = JOptionPane.showInputDialog(this, "Update Staff Name:", oldName);
+            String newName = JOptionPane.showInputDialog(this, "تعديل اسم الموظف:", oldName);
             String[] roles = {"Manager", "Cashier", "Chef"};
-            String newRole = (String) JOptionPane.showInputDialog(this, "Update Role:", "Role", JOptionPane.QUESTION_MESSAGE, null, roles, staffModel.getValueAt(selectedRow, 2));
+            String newRole = (String) JOptionPane.showInputDialog(this, "تعديل الوظيفة:", "الوظيفة", JOptionPane.QUESTION_MESSAGE, null, roles, staffModel.getValueAt(row, 2));
 
             if (newName != null && newRole != null) {
-                db.DatabaseManager.updateUser(id, newName, newRole);
+                // ملاحظة: يجب التأكد من وجود ميثود updateStaff في كلاس UserService
+                userService.updateStaff(id, newName, newRole);
                 loadStaffData();
-                JOptionPane.showMessageDialog(this, "Staff updated successfully!");
+                JOptionPane.showMessageDialog(this, "تم التحديث بنجاح");
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error updating staff.");
+            JOptionPane.showMessageDialog(this, "خطأ أثناء التحديث.");
         }
     }
 
 }
+

@@ -3,16 +3,18 @@ package view;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Locale;
-import db.DatabaseManager;
 import model.Product;
 import model.OrderItem;
-import java.awt.Font;
+import service.ProductService; // استيراد الطبقة الثانية (Business Logic)
+import service.SalesService;   // استيراد الطبقة الثانية (Business Logic)
 
 /**
- * Professional Customer Home with Sidebar and Product Cards.
+ * Layer 1: Presentation Layer (GUI).
+ * This class handles the Customer UI and interacts only with the Service Layer.
  */
 public class CustomerHome extends JFrame {
     private JPanel productsGrid;
@@ -22,12 +24,16 @@ public class CustomerHome extends JFrame {
     private double grandTotal = 0;
     private ArrayList<OrderItem> cartItems = new ArrayList<>();
 
+    // تعريف الخدمات (Layers Integration)
+    private ProductService productService = new ProductService();
+    private SalesService salesService = new SalesService();
+
     private final Color PRIMARY_PINK = new Color(240, 98, 146);
     private final Color BG_COLOR = new Color(248, 249, 250);
     private final Color TEXT_DARK = new Color(55, 71, 79);
 
     public CustomerHome() {
-        setTitle("Sweet Delight - Premium Bakery");
+        setTitle("متجر الحلويات الملكي - القائمة الرقمية");
         setSize(1150, 750);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -36,7 +42,7 @@ public class CustomerHome extends JFrame {
 
         // --- 1. القائمة الجانبية (Sidebar) ---
         JPanel sidebar = new JPanel(new BorderLayout());
-        sidebar.setPreferredSize(new Dimension(280, 750));
+        sidebar.setPreferredSize(new Dimension(300, 750));
         sidebar.setBackground(Color.WHITE);
         sidebar.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, new Color(224, 224, 224)));
 
@@ -45,38 +51,48 @@ public class CustomerHome extends JFrame {
         sidebarContent.setOpaque(false);
         sidebarContent.setBorder(new EmptyBorder(30, 20, 30, 20));
 
-        JLabel logo = new JLabel("متجر حلويات");
-        logo.setFont(new Font("Serif", Font.BOLD, 32));
+        JLabel logoLabel = new JLabel("🧁"); 
+        logoLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 60)); 
+        logoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        JLabel logo = new JLabel("متجر الحلويات");
+        logo.setFont(new Font("Segoe UI", Font.BOLD, 32));
         logo.setForeground(PRIMARY_PINK);
         logo.setAlignmentX(Component.CENTER_ALIGNMENT);
         
         cartListModel = new DefaultListModel<>();
         cartList = new JList<>(cartListModel);
+        cartList.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
         JScrollPane cartScroll = new JScrollPane(cartList);
-        cartScroll.setBorder(BorderFactory.createTitledBorder(new LineBorder(PRIMARY_PINK), " سلتي  🛒 "));
         
-        totalLabel = new JLabel("Total: 0.00 LYD");
-        totalLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        // تعريب إطار السلة
+        TitledBorder cartBorder = BorderFactory.createTitledBorder(new LineBorder(PRIMARY_PINK), " سـلتي 🛒 ");
+        cartBorder.setTitleJustification(TitledBorder.RIGHT); // محاذاة العنوان لليمين
+        cartScroll.setBorder(cartBorder);
+        
+        totalLabel = new JLabel("الإجمالي: 0.00 دينار");
+        totalLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
         totalLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        sidebarContent.add(logoLabel);
         sidebarContent.add(logo);
         sidebarContent.add(Box.createRigidArea(new Dimension(0, 40)));
         sidebarContent.add(cartScroll);
         sidebarContent.add(Box.createRigidArea(new Dimension(0, 20)));
         sidebarContent.add(totalLabel);
 
-        // --- أزرار التحكم بالأسفل (الترتيب الصحيح هنا) ---
+        // --- أزرار التحكم بالأسفل معربة ---
         JPanel sidebarBottom = new JPanel(new GridLayout(3, 1, 10, 10));
         sidebarBottom.setOpaque(false);
         sidebarBottom.setBorder(new EmptyBorder(0, 20, 30, 20));
+        JButton btnConfirm = createStyledButton("إرسال الطلب 🚀", PRIMARY_PINK, Color.WHITE);
+        Font modernFont = new Font(Font.DIALOG, Font.BOLD, 14);
+        btnConfirm.setFont(modernFont);
+        JButton btnRemove = createStyledButton("حذف من السلة 🗑", new Color(229, 115, 115), Color.WHITE);
+        btnRemove.setFont(modernFont);
+        JButton btnLogin = createStyledButton("دخول الموظفين 🔐", new Color(120, 144, 156), Color.WHITE);
+        btnLogin.setFont(modernFont);
 
-        JButton btnConfirm = createStyledButton("Place Order \uD83D\uDE80", PRIMARY_PINK, Color.WHITE);
-        btnConfirm.setFont(new Font("Segoe UI Emoji", Font.BOLD, 14));
-        JButton btnRemove = createStyledButton("إزالة طلب \uD83D\uDDD1", new Color(229, 115, 115), Color.WHITE);
-        btnRemove.setFont(new Font("Segoe UI Emoji", Font.BOLD, 14));
-        JButton btnLogin = createStyledButton("Staff Login", new Color(120, 144, 156), Color.WHITE);
-
-        // تفعيل الأكشن
         btnConfirm.addActionListener(e -> processOrder());
         btnRemove.addActionListener(e -> removeFromBasket());
         btnLogin.addActionListener(e -> {
@@ -94,8 +110,9 @@ public class CustomerHome extends JFrame {
         // --- 2. منطقة المنتجات ---
         JPanel mainContent = new JPanel(new BorderLayout());
         mainContent.setOpaque(false);
-        JLabel headerMsg = new JLabel(" أختر حلوك المفضل");
-        headerMsg.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        JLabel headerMsg = new JLabel("اختر حلوياتك المفضلة ✨");
+        headerMsg.setFont(modernFont);
+        headerMsg.setHorizontalAlignment(SwingConstants.RIGHT); // محاذاة لليمين
         headerMsg.setBorder(new EmptyBorder(30, 30, 10, 30));
         
         productsGrid = new JPanel(new GridLayout(0, 3, 25, 25));
@@ -106,29 +123,20 @@ public class CustomerHome extends JFrame {
         mainContent.add(headerMsg, BorderLayout.NORTH);
         mainContent.add(gridScroll, BorderLayout.CENTER);
 
-        add(sidebar, BorderLayout.WEST);
+        add(sidebar, BorderLayout.EAST); // نقل القائمة لجهة اليمين ليتناسب مع العربي
         add(mainContent, BorderLayout.CENTER);
 
         loadProducts();
         setVisible(true);
     }
 
-    private void removeFromBasket() {
-        int index = cartList.getSelectedIndex();
-        if (index != -1) {
-            OrderItem item = cartItems.get(index);
-            grandTotal -= item.getSubTotal();
-            totalLabel.setText("Total: " + String.format(Locale.US, "%.2f", grandTotal) + " LYD");
-            cartListModel.remove(index);
-            cartItems.remove(index);
-        } else {
-            JOptionPane.showMessageDialog(this, "Select an item to remove!");
-        }
-    }
-
+    /**
+     * Logic for loading products using the Service Layer.
+     */
     private void loadProducts() {
         productsGrid.removeAll();
-        ArrayList<Product> products = DatabaseManager.getAllProductsList();
+        // جلب البيانات من طبقة الخدمة (Layer 2)
+        ArrayList<Product> products = productService.getAllProducts();
         for (Product p : products) {
             if (p.getStockQuantity() > 0) productsGrid.add(createProductCard(p));
         }
@@ -152,21 +160,39 @@ public class CustomerHome extends JFrame {
 
         JPanel info = new JPanel(new GridLayout(2, 1));
         info.setOpaque(false);
-        info.add(new JLabel(p.getName().toUpperCase()));
-        JLabel priceLabel = new JLabel(String.format(Locale.US, "%.2f LYD", p.getPrice()));
+        
+        JLabel nameLabel = new JLabel(p.getName());
+        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        nameLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        JLabel priceLabel = new JLabel(String.format(Locale.US, "%.2f دينار", p.getPrice()));
         priceLabel.setForeground(PRIMARY_PINK);
+        priceLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        priceLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        info.add(nameLabel);
         info.add(priceLabel);
 
-        JButton btnAdd = new JButton("Add +");
+        JButton btnAdd = new JButton("إضافة للسلة +");
+        btnAdd.setBackground(BG_COLOR);
+        btnAdd.setForeground(PRIMARY_PINK);
+        btnAdd.setFocusPainted(false);
+        
         btnAdd.addActionListener(e -> {
-            String qtyS = JOptionPane.showInputDialog(this, "How many?", "1");
+            String qtyS = JOptionPane.showInputDialog(this, "ما هي الكمية التي تريدها من " + p.getName() + "؟", "1");
             if (qtyS != null) {
-                int q = Integer.parseInt(qtyS);
-                if (q <= p.getStockQuantity()) {
-                    cartItems.add(new OrderItem(p.getId(), p.getName(), q, p.getPrice()));
-                    cartListModel.addElement(p.getName() + " x" + q);
-                    grandTotal += (p.getPrice() * q);
-                    totalLabel.setText("Total: " + String.format(Locale.US, "%.2f", grandTotal) + " LYD");
+                try {
+                    int q = Integer.parseInt(qtyS);
+                    if (q > 0 && q <= p.getStockQuantity()) {
+                        cartItems.add(new OrderItem(p.getId(), p.getName(), q, p.getPrice()));
+                        cartListModel.addElement(p.getName() + " (x" + q + ")");
+                        grandTotal += (p.getPrice() * q);
+                        totalLabel.setText("الإجمالي: " + String.format(Locale.US, "%.2f", grandTotal) + " دينار");
+                    } else {
+                        JOptionPane.showMessageDialog(this, "عذراً، الكمية غير متوفرة!");
+                    }
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(this, "يرجى إدخال رقم صحيح!");
                 }
             }
         });
@@ -177,23 +203,45 @@ public class CustomerHome extends JFrame {
         return card;
     }
 
-    private JButton createStyledButton(String text, Color bg, Color fg) {
-        JButton btn = new JButton(text);
-        btn.setBackground(bg); btn.setForeground(fg);
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        btn.setFocusPainted(false); btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        return btn;
+    private void removeFromBasket() {
+        int index = cartList.getSelectedIndex();
+        if (index != -1) {
+            OrderItem item = cartItems.get(index);
+            grandTotal -= item.getSubTotal();
+            totalLabel.setText("الإجمالي: " + String.format(Locale.US, "%.2f", grandTotal) + " دينار");
+            cartListModel.remove(index);
+            cartItems.remove(index);
+        } else {
+            JOptionPane.showMessageDialog(this, "يرجى اختيار صنف لحذفه!");
+        }
     }
 
     private void processOrder() {
-        if (cartItems.isEmpty()) return;
+        if (cartItems.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "السلة فارغة!");
+            return;
+        }
         try {
-            DatabaseManager.saveSale("Web Customer", grandTotal, cartItems);
-            JOptionPane.showMessageDialog(this, "Order Sent!🧁 " );
-cartItems.clear(); cartListModel.clear(); grandTotal = 0;
-            totalLabel.setText("Total: 0.00 LYD");
+            // تنفيذ الطلب عبر طبقة الخدمة (Layer 2)
+            salesService.completeSale("زبون الموقع", grandTotal, cartItems);
+            JOptionPane.showMessageDialog(this, "تم إرسال طلبك بنجاح! 🍰\nنحن نقوم بتحضيره الآن.");
+            cartItems.clear(); 
+            cartListModel.clear(); 
+            grandTotal = 0;
+            totalLabel.setText("الإجمالي: 0.00 دينار");
             loadProducts();
-        } catch (Exception e) { JOptionPane.showMessageDialog(this, "Error: " + e.getMessage()); }
+        } catch (Exception e) { 
+            JOptionPane.showMessageDialog(this, "خطأ: " + e.getMessage()); 
+        }
+    }
+
+    private JButton createStyledButton(String text, Color bg, Color fg) {
+        JButton btn = new JButton(text);
+        btn.setBackground(bg); 
+        btn.setForeground(fg);
+        btn.setFont(new Font(Font.DIALOG, Font.BOLD, 15));
+        btn.setFocusPainted(false); 
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return btn;
     }
 }
-
