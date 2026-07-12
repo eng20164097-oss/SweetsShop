@@ -4,6 +4,12 @@ import model.Product;
 import repository.ProductRepository;
 import java.util.ArrayList;
 
+/**
+ * Layer 2: Business Logic Layer.
+ * Provides services related to product management, such as fetching all sweets
+ * and validating product data before saving to the repository.
+ */
+
 public class ProductService {
     private ProductRepository productRepository = new ProductRepository();
 

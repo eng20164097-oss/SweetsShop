@@ -6,6 +6,7 @@ import java.sql.*;
 import java.util.ArrayList;
 
 /**
+ * Layer 3: Data Access Layer
  * Repository for Sales and Order-tracking operations.
  */
 public class SalesRepository {

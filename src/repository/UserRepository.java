@@ -4,6 +4,7 @@ import db.DatabaseManager;
 import java.sql.*;
 
 /**
+ * Layer 3: Data Access Layer
  * Repository for User-related database operations.
  */
 public class UserRepository {

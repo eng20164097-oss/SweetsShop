@@ -3,7 +3,7 @@ package db;
 import java.sql.*;
 
 /**
- * Layer 4: Infrastructure Layer.
+ * Layer 4: Database Layer.
  * Implements the Singleton pattern for the database connection.
  */
 public class DatabaseManager {

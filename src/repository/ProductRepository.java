@@ -6,6 +6,7 @@ import java.sql.*;
 import java.util.ArrayList;
 
 /**
+ * Layer 3: Data Access Layer
  * Repository for Product-related database operations.
  */
 public class ProductRepository {

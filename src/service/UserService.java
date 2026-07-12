@@ -2,6 +2,12 @@ package service;
 
 import repository.UserRepository;
 import java.sql.ResultSet;
+/**
+ * Layer 2: Business Logic Layer.
+ * Handles user-related business logic, including authentication (login)
+ * and managing staff accounts (Manager, Cashier, Chef).
+ */
+
 
 public class UserService {
     private UserRepository userRepository = new UserRepository();

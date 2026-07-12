@@ -4,6 +4,11 @@ import repository.*;
 import java.sql.ResultSet;
 import java.util.HashMap;
 import java.util.Map;
+/**
+ * Layer 2: Business Logic Layer.
+ * Responsible for generating analytical data and statistics for the dashboard,
+ * including total revenue, staff counts, and low-stock alerts.
+ */
 
 public class ReportService {
     private SalesRepository salesRepo = new SalesRepository();

@@ -5,6 +5,12 @@ import repository.SalesRepository;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
+/**
+ * Layer 2: Business Logic Layer.
+ * Manages the logic for processing sales transactions, updating order statuses,
+ * and coordinating between the cashier and the kitchen (chef).
+ */
+
 
 public class SalesService {
     private SalesRepository salesRepository = new SalesRepository();
