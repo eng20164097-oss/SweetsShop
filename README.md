@@ -9,3 +9,7 @@
 | أسطر التعليقات (Comments)     | 292 سطراً        | يثبت تطبيق معايير التوثيق الاحترافية (Javadoc) لكل الأجزاء. |
 | إجمالي الأسطر (Total)          | 2,372 سطراً      | الحجم الكلي للمشروع شاملاً التنسيق والفراغات المنظمة. |
 | المعمارية (Architecture)      | 4 طبقات         | فصل كامل للمسؤوليات (View, Service, Repository, DB). |
+
+   ## 🗺️ مخطط الأصناف (Class Diagram)
+   ![Class Diagram](resources/uml_diagram.png)
+   
