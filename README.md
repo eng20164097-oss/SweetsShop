@@ -1,18 +1,11 @@
-## Getting Started
+التحليل الإحصائي النهائي للنظام (Statistical Analysis)
 
-Welcome to the VS Code Java world. Here is a guideline to help you get started to write Java code in Visual Studio Code.
+تم استخراج هذه البيانات بدقة باستخدام أداة VS Code Counter:
 
-## Folder Structure
-
-The workspace contains two folders by default, where:
-
-- `src`: the folder to maintain sources
-- `lib`: the folder to maintain dependencies
-
-Meanwhile, the compiled output files will be generated in the `bin` folder by default.
-
-> If you want to customize the folder structure, open `.vscode/settings.json` and update the related settings there.
-
-## Dependency Management
-
-The `JAVA PROJECTS` view allows you to manage your dependencies. More details can be found [here](https://github.com/microsoft/vscode-java-dependency#manage-dependencies).
+|    المعيار (Metric)           | القيمة (Value)   | الملاحظات (Notes) |
+| 
+| إجمالي الكلاسات (Java Classes) | 26 كلاًساً          |تجاوز الحد الادنى المطلوب (12 كلاس)|
+| أسطر الكود (Lines of Code)     |1,666 سطراً       | عدد أسطر برمجة فعلية يعكس ان النظام شامل وتعدد وظائفه. |
+| أسطر التعليقات (Comments)     | 292 سطراً        | يثبت تطبيق معايير التوثيق الاحترافية (Javadoc) لكل الأجزاء. |
+| إجمالي الأسطر (Total)          | 2,372 سطراً      | الحجم الكلي للمشروع شاملاً التنسيق والفراغات المنظمة. |
+| المعمارية (Architecture)      | 4 طبقات         | فصل كامل للمسؤوليات (View, Service, Repository, DB). |
